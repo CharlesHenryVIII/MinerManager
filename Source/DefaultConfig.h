@@ -5,6 +5,7 @@ R"term(#This is the configuration file for MinerManager
 
 $SETTINGS$
 UpdateRate=5 #Seconds
+ExecutableName = PhoenixMiner.exe #Either the full path or the local path to the miner executable
 
 #Please list processes you would want the miner to stop for
 $INCLUSIVE$

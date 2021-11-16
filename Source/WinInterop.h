@@ -59,4 +59,6 @@ void SetThreadName(std::thread::native_handle_type threadID, std::string name);
 bool CreateFolder(const std::string& folderLocation);
 int32 CreateMessageWindow(const char* message, const char* title, uint32 type);
 void CreateErrorWindow(const char* message);
-std::vector<Process> GetFullProcessList();
+void GetFullProcessList(std::vector<Process>& output);
+void StartProcess();
+void Sleep(float seconds);

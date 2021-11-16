@@ -263,20 +263,17 @@ void CreateErrorWindow(const char* message)
 #include <tchar.h>
 #include <psapi.h>
 
-std::vector<Process> GetFullProcessList()
+void GetFullProcessList(std::vector<Process>& output)
 {   
-    std::vector<Process> result;
+    // Get processes
     DWORD processIDs[PROCESS_COUNT] = {};
     DWORD bytesUsedInProcessIDs;
-
-    // Get processes
     if (!EnumProcesses(processIDs, sizeof(processIDs), &bytesUsedInProcessIDs))
-        return result;
+        return;
 
 
     // Calculate how many process identifiers were returned.
     int32 processCount = bytesUsedInProcessIDs / sizeof(DWORD);
-    result.reserve(processCount);
 
     // Print the name and process identifier for each process.
     for (int32 i = 0; i < processCount; i++)
@@ -305,7 +302,7 @@ std::vector<Process> GetFullProcessList()
                         Process p;
                         p.name = processName;
                         p.id = processID;
-                        result.push_back(p);
+                        output.push_back(p);
 #if _DEBUG
                         // Print the process name and identifier.
                         _tprintf(TEXT("%s  (PID: %u)\n"), processName, processID);
@@ -317,5 +314,49 @@ std::vector<Process> GetFullProcessList()
             CloseHandle(processHandle);
         }
     }
-    return result;
+}
+
+void StartProcess(std::string fileLocation)
+{
+    SECURITY_ATTRIBUTES processAttributes;
+    processAttributes.lpSecurityDescriptor = NULL;
+    processAttributes.bInheritHandle = true;
+    processAttributes.nLength = sizeof(processAttributes);
+
+    SECURITY_ATTRIBUTES threadAttributes;
+    threadAttributes.lpSecurityDescriptor = NULL;
+    threadAttributes.bInheritHandle = true;
+    threadAttributes.nLength = sizeof(threadAttributes);
+
+    DWORD newProcessFlags = CREATE_NEW_CONSOLE | NORMAL_PRIORITY_CLASS;
+
+    STARTUPINFOA startupInfo;
+    ZeroMemory(&startupInfo, sizeof(startupInfo));
+    startupInfo.cb = sizeof(startupInfo);
+
+    PROCESS_INFORMATION processInfo;
+    ZeroMemory(&processInfo, sizeof(processInfo));
+
+    BOOL result = CreateProcessA(
+        fileLocation.c_str(),   //[in, optional]        LPCSTR                  lpApplicationName,
+        NULL,                   //[in, out, optional]   LPSTR                   lpCommandLine,
+        &processAttributes,     //[in, optional]        LPSECURITY_ATTRIBUTES   lpProcessAttributes,
+        &threadAttributes,      //[in, optional]        LPSECURITY_ATTRIBUTES   lpThreadAttributes,
+        true,                   //[in]                  BOOL                    bInheritHandles,
+        newProcessFlags,        //[in]                  DWORD                   dwCreationFlags,
+        NULL,                   //[in, optional]        LPVOID                  lpEnvironment,
+        NULL,                   //[in, optional]        LPCSTR                  lpCurrentDirectory,
+        &startupInfo,           //[in]                  LPSTARTUPINFOA          lpStartupInfo,
+        &processInfo            //[out]                 LPPROCESS_INFORMATION   lpProcessInformation
+    );
+}
+
+#include <chrono>
+#include <thread>
+void Sleep(float i_seconds)
+{
+    int32 milli = int32(i_seconds * 1000);
+    using fsec = std::chrono::duration<float>;
+    //round<std::chrono::nanoseconds>()
+    std::this_thread::sleep_for(std::chrono::duration<float>{i_seconds});
 }
