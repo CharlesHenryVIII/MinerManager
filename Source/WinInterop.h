@@ -48,7 +48,23 @@ private:
     bool FileDestructor();
 };
 
+
 struct Process {
+    Process(std::string fileLocation) : m_fileLocation(fileLocation) {};
+    ~Process();
+
+    void StartProcess();
+    void EndProcess(uint32 exitCode = 0);
+
+private:
+    void CloseHandles();
+
+    PROCESS_INFORMATION m_info;
+    std::string m_fileLocation;
+    bool m_processIsValid = false;
+};
+
+struct ProcessInfo {
     std::string name;
     uint64 id;
 };
@@ -59,6 +75,5 @@ void SetThreadName(std::thread::native_handle_type threadID, std::string name);
 bool CreateFolder(const std::string& folderLocation);
 int32 CreateMessageWindow(const char* message, const char* title, uint32 type);
 void CreateErrorWindow(const char* message);
-void GetFullProcessList(std::vector<Process>& output);
-void StartProcess();
+void GetFullProcessList(std::vector<ProcessInfo>& output);
 void Sleep(float seconds);

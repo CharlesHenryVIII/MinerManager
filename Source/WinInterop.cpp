@@ -263,7 +263,7 @@ void CreateErrorWindow(const char* message)
 #include <tchar.h>
 #include <psapi.h>
 
-void GetFullProcessList(std::vector<Process>& output)
+void GetFullProcessList(std::vector<ProcessInfo>& output)
 {   
     // Get processes
     DWORD processIDs[PROCESS_COUNT] = {};
@@ -299,7 +299,7 @@ void GetFullProcessList(std::vector<Process>& output)
                     //process is valid
                     {
 
-                        Process p;
+                        ProcessInfo p;
                         p.name = processName;
                         p.id = processID;
                         output.push_back(p);
@@ -316,8 +316,24 @@ void GetFullProcessList(std::vector<Process>& output)
     }
 }
 
-void StartProcess(std::string fileLocation)
+Process::~Process()
 {
+    if (m_processIsValid)
+    {
+        EndProcess();
+    }
+}
+
+void Process::StartProcess()
+{
+    if (m_info.handle)
+    {
+        m_info.hProcess;
+        m_info.hThread;
+        //DWORD dwProcessId;
+        //DWORD dwThreadId;
+
+    }
     SECURITY_ATTRIBUTES processAttributes;
     processAttributes.lpSecurityDescriptor = NULL;
     processAttributes.bInheritHandle = true;
@@ -334,11 +350,10 @@ void StartProcess(std::string fileLocation)
     ZeroMemory(&startupInfo, sizeof(startupInfo));
     startupInfo.cb = sizeof(startupInfo);
 
-    PROCESS_INFORMATION processInfo;
-    ZeroMemory(&processInfo, sizeof(processInfo));
+    ZeroMemory(&m_info, sizeof(m_info));
 
     BOOL result = CreateProcessA(
-        fileLocation.c_str(),   //[in, optional]        LPCSTR                  lpApplicationName,
+        m_fileLocation.c_str(), //[in, optional]        LPCSTR                  lpApplicationName,
         NULL,                   //[in, out, optional]   LPSTR                   lpCommandLine,
         &processAttributes,     //[in, optional]        LPSECURITY_ATTRIBUTES   lpProcessAttributes,
         &threadAttributes,      //[in, optional]        LPSECURITY_ATTRIBUTES   lpThreadAttributes,
@@ -347,8 +362,32 @@ void StartProcess(std::string fileLocation)
         NULL,                   //[in, optional]        LPVOID                  lpEnvironment,
         NULL,                   //[in, optional]        LPCSTR                  lpCurrentDirectory,
         &startupInfo,           //[in]                  LPSTARTUPINFOA          lpStartupInfo,
-        &processInfo            //[out]                 LPPROCESS_INFORMATION   lpProcessInformation
+        &m_info                 //[out]                 LPPROCESS_INFORMATION   lpProcessInformation
     );
+    if (result == 0)
+    {
+        DWORD CreateProcessError = GetLastError();
+        DebugPrint("CreateProcessA error: %i", CreateProcessError);
+        assert(false);
+        CloseHandles();
+        m_processIsValid = false;
+    }
+    else
+    {
+        m_processIsValid = true;
+    }
+}
+
+void Process::CloseHandles()
+{
+    CloseHandle(m_info.hProcess);
+    CloseHandle(m_info.hThread);
+}
+
+void Process::EndProcess(uint32 exitCode)
+{
+    TerminateProcess(m_info.hProcess, exitCode);
+    CloseHandles();
 }
 
 #include <chrono>

@@ -176,14 +176,15 @@ int main()
     }
 
     bool running = true;
-    std::vector<Process> processList;
+    Process minerProcess();
+    std::vector<ProcessInfo> processList;
     processList.reserve(500);
     while (running)
     {
         GetFullProcessList(processList);
 
         bool foundGame = false;
-        for (const Process& process : processList)
+        for (const ProcessInfo& process : processList)
         {
             for (const std::string& t : exclusiveText)
             {
