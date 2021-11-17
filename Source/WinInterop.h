@@ -48,25 +48,29 @@ private:
     bool FileDestructor();
 };
 
+struct _PROCESS_INFORMATION;
 
 struct Process {
     Process(std::string fileLocation) : m_fileLocation(fileLocation) {};
     ~Process();
 
-    void StartProcess();
-    void EndProcess(uint32 exitCode = 0);
+    void Start();
+    void Pause();
+    void End(uint32 exitCode = 0);
+
+    bool m_running = false;
 
 private:
     void CloseHandles();
 
-    PROCESS_INFORMATION m_info;
+    _PROCESS_INFORMATION* m_info = nullptr;
     std::string m_fileLocation;
-    bool m_processIsValid = false;
+    bool        m_isValid = false;
 };
 
 struct ProcessInfo {
     std::string name;
-    uint64 id;
+    uint32 id;
 };
 
 void DebugPrint(const char* fmt, ...);

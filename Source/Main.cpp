@@ -23,11 +23,13 @@ void CleanString(std::string& input, bool removeSpaces)
     {
         input.erase(hashLocation);
     }
+    while (input.find_last_of(' ') == input.size() - 1 || input.find_last_of('\n') == input.size() - 1)
+        input.erase(input.size() - 1, 1);
     if (removeSpaces)
         TextRemoval(input, " ");
 }
 
-void GetUpdatedFileInfo(std::vector<std::string>& fileText, uint64& lastModifiedTime)
+bool GetUpdatedFileInfo(std::vector<std::string>& fileText, uint64& lastModifiedTime)
 {
     //Check for file not there, create it if its not, and fill it with the default config file
     //Config File Scope
@@ -46,11 +48,11 @@ void GetUpdatedFileInfo(std::vector<std::string>& fileText, uint64& lastModified
     if (!configFile.m_handleIsValid)
     {
 #if _DEBUG
-        printf("Couldn't get config file handle\n");
+        DebugPrint("Couldn't get config file handle\n");
 #else
         CreateErrorWindow("Could not get file handle to \"MinerManager.config\"");
 #endif
-        return;
+        return false;
     }
 
     configFile.GetTime();
@@ -60,8 +62,8 @@ void GetUpdatedFileInfo(std::vector<std::string>& fileText, uint64& lastModified
     }
     if (configFile.m_time <= lastModifiedTime)
     {
-        printf("No config file update\n");
-        return;
+        //DebugPrint("No config file update\n");
+        return false;
     }
 
     lastModifiedTime = configFile.m_time;
@@ -75,117 +77,132 @@ void GetUpdatedFileInfo(std::vector<std::string>& fileText, uint64& lastModified
     fileText.clear();
     fileText = TextToStringArray(configFile.m_dataString.c_str(), "\n");
 
-    return;
+    return true;
 }
 
-int main()
+void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& programSettings, std::vector<std::string>& inclusiveText, std::vector<std::string>& exclusiveText)
 {
-    Settings programSettings = {};
-    uint64 lastTimeSettingsWereModified = {};
+    std::vector<std::string> configFileText;
+    if (!GetUpdatedFileInfo(configFileText, lastTimeSettingsWereModified))
+        return;
 
-    std::vector<std::string> inclusiveText;
-    std::vector<std::string> exclusiveText;
-    
+    ParseState parsingState = Parse_None;
+    std::vector<std::string> settingsText;
+    for (std::string& textLine : configFileText)
     {
-        std::vector<std::string> configFileText;
-        GetUpdatedFileInfo(configFileText, lastTimeSettingsWereModified);
-
-        ParseState parsingState = Parse_None;
-        std::vector<std::string> settingsText;
-        for (std::string& textLine : configFileText)
+        for (int32 c = 0; c < textLine.size(); c++)
         {
-            for (int32 c = 0; c < textLine.size(); c++)
+            char& character = textLine[c];
+            if (character == '#')
             {
-                char& character = textLine[c];
-                if (character == '#')
+                break;
+            }
+            else if (character == '$')
+            {
+                if (TextDetection(textLine, "SETTINGS"))
+                    parsingState = Parse_Settings;
+                else if (TextDetection(textLine, "INCLUSIVE"))
+                    parsingState = Parse_Inclusive;
+                else if (TextDetection(textLine, "EXCLUSIVE"))
+                    parsingState = Parse_Exclusive;
+
+                break;
+            }
+            else if (character == ' ')
+            {
+                //word ended
+                continue;
+            }
+            else
+            {
+                switch (parsingState)
                 {
-                    break;
-                }
-                else if (character == '$')
+                case Parse_Settings:
                 {
-                    if (TextDetection(textLine, "SETTINGS"))
-                        parsingState = Parse_Settings;
-                    else if (TextDetection(textLine, "INCLUSIVE"))
-                        parsingState = Parse_Inclusive;
-                    else if (TextDetection(textLine, "EXCLUSIVE"))
-                        parsingState = Parse_Exclusive;
+                    CleanString(textLine, true);
+                    //Organize string
+                    SplitText keyValue = TextSplit(textLine.c_str(), "=");
+                    if (keyValue.before == "" || keyValue.after == "")
+                    {
+                        assert(false);
+                        CreateErrorWindow(ToString("unknown string array format: %s", textLine.c_str()).c_str());
+                        //return 1;
+                    }
+                    const std::string& key = keyValue.before;
+                    const std::string& value = keyValue.after;
+
+                    if (key.find("UpdateRate") != std::string::npos)
+                    {
+                        float valueTranslated = std::stof(value);
+                        programSettings.UpdateRate = valueTranslated;
+                    }
+                    else if (key.find("ExecutableName") != std::string::npos)
+                    {
+                        programSettings.executableName = value;
+                    }
 
                     break;
                 }
-                else if (character == ' ')
+                case Parse_Inclusive:
                 {
-                    //word ended
-                    continue;
+                    CleanString(textLine, false);
+                    if (textLine != "")
+                    {
+                        inclusiveText.push_back(textLine);
+                        c = (int32)textLine.size() - 1;
+                    }
+                    break;
                 }
-                else
+                case Parse_Exclusive:
                 {
-                    switch (parsingState)
+                    CleanString(textLine, false);
+                    if (textLine != "")
                     {
-                    case Parse_Settings:
-                    {
-                        CleanString(textLine, true);
-                        //Organize string
-                        SplitText keyValue = TextSplit(textLine.c_str(), "=");
-                        if (keyValue.before == "" || keyValue.after == "")
-                        {
-                            assert(false);
-                            CreateErrorWindow(ToString("unknown string array format: %s", textLine.c_str()).c_str());
-                            return 1;
-                        }
-                        const std::string& key = keyValue.before;
-                        const std::string& value = keyValue.after;
-
-                        if (key.find("UpdateRate") != std::string::npos)
-                        {
-                            float valueTranslated = std::stof(value);
-                            programSettings.UpdateRate = valueTranslated;
-                        }
-                        else if (key.find("ExecutableName") != std::string::npos)
-                        {
-                            programSettings.executableName = value;
-                        }
-
-                        break;
+                        exclusiveText.push_back(textLine);
+                        c = (int32)textLine.size() - 1;
                     }
-                    case Parse_Inclusive:
-                    {
-                        CleanString(textLine, false);
-                        if (textLine != "")
-                        {
-                            inclusiveText.push_back(textLine);
-                            c = (int32)textLine.size() - 1;
-                        }
-                        break;
-                    }
-                    case Parse_Exclusive:
-                    {
-                        CleanString(textLine, false);
-                        if (textLine != "")
-                        {
-                            exclusiveText.push_back(textLine);
-                            c = (int32)textLine.size() - 1;
-                        }
-                        break;
-                    }
-                    default:
-                        break;
-                    }
+                    break;
+                }
+                default:
+                    break;
                 }
             }
         }
     }
+    printf("MinerManager settings updated\n");
+}
+
+int main()
+{
+    printf("MinerManager Started\n");
+    Settings programSettings = {};
+    uint64 lastTimeConfigWasModified = {};
+
+    std::vector<std::string> inclusiveText;
+    std::vector<std::string> exclusiveText;
+
+    UpdateSettingsAndTextLists(lastTimeConfigWasModified, programSettings, inclusiveText, exclusiveText);
 
     bool running = true;
-    Process minerProcess();
+#if _DEBUG
+    //Process minerProcess("InfiniteSplat.exe");
+    Process minerProcess(programSettings.executableName);
+#else
+    Process minerProcess(programSettings.executableName);
+#endif
     std::vector<ProcessInfo> processList;
     processList.reserve(500);
-    while (running)
+    //for (int32 loop = 0; loop < 5; loop++)
+    while (true)
     {
+        UpdateSettingsAndTextLists(lastTimeConfigWasModified, programSettings, inclusiveText, exclusiveText);
         GetFullProcessList(processList);
 
         bool foundGame = false;
-        for (const ProcessInfo& process : processList)
+        //for (const ProcessInfo& process : processList)
+        for (int32 i = 0; i < processList.size(); i++)
         {
+            const ProcessInfo& process = processList[i];
             for (const std::string& t : exclusiveText)
             {
                 if (t == process.name)
@@ -211,16 +228,19 @@ int main()
         if (foundGame)
         {
             //kill miner
+            //minerProcess.Pause();
+            minerProcess.End();
         }
         else
         {
-            StartProcess();
-
             //check if miner is runnning and start if not
+            minerProcess.Start();
         }
 
         Sleep(programSettings.UpdateRate);
     }
+
+    minerProcess.End();
 
     return 0;
 }

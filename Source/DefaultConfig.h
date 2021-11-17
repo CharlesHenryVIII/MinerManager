@@ -8,10 +8,14 @@ UpdateRate=5 #Seconds
 ExecutableName = PhoenixMiner.exe #Either the full path or the local path to the miner executable
 
 #Please list processes you would want the miner to stop for
+#Inclusives will stop the mining executible if the phrase is       found in      the process name and is case insensitive
+#Exlusives  will stop the mining executible if the phrase is an exact match with the process name and is case sensitive
+
 $INCLUSIVE$
 F1_20 #F1_2019_dx12.exe and F1_2012.exe
 doom #DOOMx64vk.exe and DOOMEternalx64vk.exe
 civilization #CivilizationV_DX11.exe and CivilizationVI_DX12.exe
+EscapeFromTarkov #EscapeFromTarkov_BE.exe
 
 $EXCLUSIVE$
 League of Legends.exe
@@ -34,7 +38,6 @@ Kena-Win64-Shipping.exe
 csgo.exe
 bf.exe
 DyingLightGame.exe
-EscapeFromTarkov.exe
 Warcraft.exe
 Wow.exe
 WowClassic.exe

@@ -265,6 +265,7 @@ void CreateErrorWindow(const char* message)
 
 void GetFullProcessList(std::vector<ProcessInfo>& output)
 {   
+    output.clear();
     // Get processes
     DWORD processIDs[PROCESS_COUNT] = {};
     DWORD bytesUsedInProcessIDs;
@@ -306,6 +307,7 @@ void GetFullProcessList(std::vector<ProcessInfo>& output)
 #if _DEBUG
                         // Print the process name and identifier.
                         _tprintf(TEXT("%s  (PID: %u)\n"), processName, processID);
+                        //DebugPrint(TEXT("%s  (PID: %u)\n"), processName, processID);
 #endif
                     }
                 }
@@ -318,22 +320,31 @@ void GetFullProcessList(std::vector<ProcessInfo>& output)
 
 Process::~Process()
 {
-    if (m_processIsValid)
+    if (m_isValid)
     {
-        EndProcess();
+        End();
     }
 }
 
-void Process::StartProcess()
+void Process::Start()
 {
-    if (m_info.handle)
+    if (m_isValid)
     {
-        m_info.hProcess;
-        m_info.hThread;
-        //DWORD dwProcessId;
-        //DWORD dwThreadId;
-
+        if (!m_running)
+        {
+            DWORD resumeStatus = ResumeThread(m_info->hThread);
+            if (resumeStatus == -1)
+            {
+                DWORD resumeError = GetLastError();
+                DebugPrint("ResumeThread error: %i", resumeError);
+                assert(false);
+            }
+            else
+                m_running = true;
+        }
+        return;
     }
+
     SECURITY_ATTRIBUTES processAttributes;
     processAttributes.lpSecurityDescriptor = NULL;
     processAttributes.bInheritHandle = true;
@@ -350,7 +361,8 @@ void Process::StartProcess()
     ZeroMemory(&startupInfo, sizeof(startupInfo));
     startupInfo.cb = sizeof(startupInfo);
 
-    ZeroMemory(&m_info, sizeof(m_info));
+    m_info = new PROCESS_INFORMATION();
+    ZeroMemory(m_info, sizeof(*m_info));
 
     BOOL result = CreateProcessA(
         m_fileLocation.c_str(), //[in, optional]        LPCSTR                  lpApplicationName,
@@ -362,40 +374,63 @@ void Process::StartProcess()
         NULL,                   //[in, optional]        LPVOID                  lpEnvironment,
         NULL,                   //[in, optional]        LPCSTR                  lpCurrentDirectory,
         &startupInfo,           //[in]                  LPSTARTUPINFOA          lpStartupInfo,
-        &m_info                 //[out]                 LPPROCESS_INFORMATION   lpProcessInformation
+        m_info                  //[out]                 LPPROCESS_INFORMATION   lpProcessInformation
     );
     if (result == 0)
     {
         DWORD CreateProcessError = GetLastError();
         DebugPrint("CreateProcessA error: %i", CreateProcessError);
+        CreateErrorWindow(ToString("CreateProcessA error: %i", CreateProcessError).c_str());
         assert(false);
-        CloseHandles();
-        m_processIsValid = false;
+        End(0);
     }
     else
     {
-        m_processIsValid = true;
+        m_isValid = true;
+        m_running = true;
     }
 }
 
 void Process::CloseHandles()
 {
-    CloseHandle(m_info.hProcess);
-    CloseHandle(m_info.hThread);
+    CloseHandle(m_info->hProcess);
+    CloseHandle(m_info->hThread);
 }
 
-void Process::EndProcess(uint32 exitCode)
+void Process::Pause()
 {
-    TerminateProcess(m_info.hProcess, exitCode);
-    CloseHandles();
+    if (m_isValid)
+    {
+        if (m_running)
+        {
+            DWORD resumeStatus = SuspendThread(m_info->hThread);
+            if (resumeStatus == -1)
+            {
+                DWORD resumeError = GetLastError();
+                DebugPrint("SuspendThread error: %i", resumeError);
+                assert(false);
+            }
+            else
+                m_running = false;
+        }
+        return;
+    }
+}
+
+void Process::End(uint32 exitCode)
+{
+    if (m_info && m_info->hProcess)
+    {
+        TerminateProcess(m_info->hProcess, exitCode);
+        CloseHandles();
+        m_isValid = false;
+    }
 }
 
 #include <chrono>
 #include <thread>
 void Sleep(float i_seconds)
 {
-    int32 milli = int32(i_seconds * 1000);
     using fsec = std::chrono::duration<float>;
-    //round<std::chrono::nanoseconds>()
     std::this_thread::sleep_for(std::chrono::duration<float>{i_seconds});
 }
