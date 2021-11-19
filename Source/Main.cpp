@@ -7,6 +7,7 @@ const char* configFileName = "MinerManager.config";
 struct Settings {
     float UpdateRate;
     std::string executableName;
+    std::string afterburnerLocation;
 };
 
 enum ParseState {
@@ -122,10 +123,9 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
             }
             else
             {
-                switch (parsingState)
+                if (parsingState == Parse_Settings)
                 {
-                case Parse_Settings:
-                {
+                    const std::string original = textLine;
                     CleanString(textLine, true);
                     //Organize string
                     SplitText keyValue = TextSplit(textLine.c_str(), "=");
@@ -142,15 +142,25 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
                     {
                         float valueTranslated = std::stof(value);
                         programSettings.UpdateRate = valueTranslated;
+                        break;
                     }
                     else if (key.find("ExecutableName") != std::string::npos)
                     {
                         programSettings.executableName = value;
+                        break;
                     }
-
-                    break;
+                    else if (key.find("AfterburnerLocation") != std::string::npos)
+                    {
+                        SplitText split = TextSplit(original.c_str(), "=");
+                        while (split.after[0] == ' ')
+                            split.after.erase(0, 1);
+                        while (split.after[split.after.size() - 1] == '\n' || split.after[split.after.size() - 1] == ' ')
+                            split.after.erase(split.after.size() - 1, 1);
+                        programSettings.afterburnerLocation = split.after;
+                        break;
+                    }
                 }
-                case Parse_Inclusive:
+                if (parsingState == Parse_Inclusive)
                 {
                     CleanString(textLine, false);
                     if (textLine != "")
@@ -160,7 +170,7 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
                     }
                     break;
                 }
-                case Parse_Exclusive:
+                if (parsingState == Parse_Exclusive)
                 {
                     CleanString(textLine, false);
                     if (textLine != "")
@@ -168,9 +178,6 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
                         exclusiveText.push_back(textLine);
                         c = (int32)textLine.size() - 1;
                     }
-                    break;
-                }
-                default:
                     break;
                 }
             }
@@ -194,19 +201,24 @@ int main()
 #if _DEBUG
     //Process minerProcess("InfiniteSplat.exe");
     Process minerProcess(programSettings.executableName);
+    Process afterburner(programSettings.afterburnerLocation);
 #else
     Process minerProcess(programSettings.executableName);
+    Process afterburner(programSettings.afterburnerLocation);
 #endif
     std::vector<ProcessInfo> processList;
     processList.reserve(500);
+    bool currentlyMining = false;
+    bool foundGame = false;
+    bool appRunning = true;
     //for (int32 loop = 0; loop < 5; loop++)
-    while (true)
+    while (appRunning)
     {
         UpdateSettingsAndTextLists(lastTimeConfigWasModified, programSettings, inclusiveText, exclusiveText);
         GetFullProcessList(processList);
 
-        bool foundGame = false;
         //for (const ProcessInfo& process : processList)
+        foundGame = false;
         for (int32 i = 0; i < processList.size(); i++)
         {
             const ProcessInfo& process = processList[i];
@@ -232,24 +244,38 @@ int main()
             if (foundGame)
                 break;
         }
-        if (foundGame)
+        if (foundGame == currentlyMining)
         {
-            //kill miner
-            //minerProcess.Pause();
-            //EndProcess(programSettings.executableName);
-            minerProcess.End();
-            //start-process 'C:\Program Files (x86)\MSI Afterburner\MSIAfterburner.exe' -ArgumentList "-profile1"
-        }
-        else
-        {
-            //check if miner is runnning and start if not
-            minerProcess.Start();
-            //start-process 'C:\Program Files (x86)\MSI Afterburner\MSIAfterburner.exe' -ArgumentList "-profile2"
+            if (foundGame)
+            {
+                //kill miner
+                minerProcess.End();
+
+                //start-process 'C:\Program Files (x86)\MSI Afterburner\MSIAfterburner.exe' -ArgumentList "-profile1"
+                std::string arguments = "-argumentList \"-profile1\"";
+                afterburner.Start(arguments.c_str());
+
+                currentlyMining = false;
+            }
+            else
+            {
+                //check if miner is runnning and start if not
+                minerProcess.StartWithCheck();
+
+                //start-process 'C:\Program Files (x86)\MSI Afterburner\MSIAfterburner.exe' -ArgumentList "-profile2"
+                std::string arguments = "-argumentList \"-profile2\"";
+                afterburner.Start(arguments.c_str());
+
+                currentlyMining = true;
+            }
         }
 
         Sleep(programSettings.UpdateRate);
     }
 
+    std::string arguments = "-argumentList \"-profile1\"";
+    afterburner.Start(arguments.c_str());
+    afterburner.End();
     minerProcess.End();
 
     return 0;

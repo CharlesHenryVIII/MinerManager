@@ -326,7 +326,9 @@ Process::~Process()
     }
 }
 
-void Process::Start()
+//void Process::Start(char* arguments)
+//void Process::Start(std::string& arguments)
+void Process::StartWithCheck(const char* arguments)
 {
     if (m_isValid)
     {
@@ -344,6 +346,12 @@ void Process::Start()
         }
         return;
     }
+    Start(arguments);
+}
+
+void Process::Start(const char* arguments)
+{
+    LPSTR lpCommandLine = const_cast<char*>(arguments);
 
     SECURITY_ATTRIBUTES processAttributes;
     processAttributes.lpSecurityDescriptor = NULL;
@@ -366,7 +374,7 @@ void Process::Start()
 
     BOOL result = CreateProcessA(
         m_fileLocation.c_str(), //[in, optional]        LPCSTR                  lpApplicationName,
-        NULL,                   //[in, out, optional]   LPSTR                   lpCommandLine,
+        lpCommandLine,          //[in, out, optional]   LPSTR                   lpCommandLine,
         &processAttributes,     //[in, optional]        LPSECURITY_ATTRIBUTES   lpProcessAttributes,
         &threadAttributes,      //[in, optional]        LPSECURITY_ATTRIBUTES   lpThreadAttributes,
         true,                   //[in]                  BOOL                    bInheritHandles,
@@ -379,8 +387,22 @@ void Process::Start()
     if (result == 0)
     {
         DWORD CreateProcessError = GetLastError();
-        DebugPrint("CreateProcessA error: %i", CreateProcessError);
-        CreateErrorWindow(ToString("CreateProcessA error: %i", CreateProcessError).c_str());
+        std::string error;
+        switch (CreateProcessError)
+        {
+        case 740:
+        {
+            error = "Program needs to be ran as administrator";
+            break;
+        }
+        case 3:
+        {
+            error = ToString("the system cannot find the path specified \"%s\"", m_fileLocation.c_str());
+            break;
+        }
+        }
+        DebugPrint("CreateProcessA error: %i, %s", CreateProcessError, error.c_str());
+        CreateErrorWindow(ToString("CreateProcessA error: %i", CreateProcessError, error.c_str()).c_str());
         assert(false);
         End(0);
     }
@@ -430,17 +452,17 @@ void Process::End(uint32 exitCode)
 }
 
 
-void EndProcess(const std::vector<ProcessInfo>& output, std::string processName)
-{
-    for (const ProcessInfo& p : output)
-    {
-        if (FindStringCaseInsensitive(processName, p.name))
-        {
-
-            //kill process
-        }
-    }
-}
+//void EndProcess(const std::vector<ProcessInfo>& output, std::string processName)
+//{
+//    for (const ProcessInfo& p : output)
+//    {
+//        if (FindStringCaseInsensitive(processName, p.name))
+//        {
+//
+//            //kill process
+//        }
+//    }
+//}
 
 #include <chrono>
 #include <thread>

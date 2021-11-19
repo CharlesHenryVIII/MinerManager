@@ -54,7 +54,9 @@ struct Process {
     Process(std::string fileLocation) : m_fileLocation(fileLocation) {};
     ~Process();
 
-    void Start();
+    //void Start(char* arguments = nullptr);
+    void Start(const char* arguments = nullptr);
+    void StartWithCheck(const char* arguments = nullptr);
     void Pause();
     void End(uint32 exitCode = 0);
 

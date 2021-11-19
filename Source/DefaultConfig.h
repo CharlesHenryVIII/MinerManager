@@ -6,7 +6,7 @@ R"term(#This is the configuration file for MinerManager
 $SETTINGS$
 UpdateRate=5 #Seconds
 ExecutableName = PhoenixMiner.exe #Either the full path or the local path to the miner executable
-
+AfterburnerLocation = C:\Program Files (x86)\MSI Afterburner\MSIAfterburner.exe
 
 #Please list processes you would want the miner to stop for
 #Inclusives will stop the mining executible if the phrase is       found in      the process name and is case insensitive
@@ -17,6 +17,7 @@ F1_20 #F1_2019_dx12.exe and F1_2012.exe
 doom #DOOMx64vk.exe and DOOMEternalx64vk.exe
 civilization #CivilizationV_DX11.exe and CivilizationVI_DX12.exe
 EscapeFromTarkov #EscapeFromTarkov_BE.exe
+factorio
 
 $EXCLUSIVE$
 League of Legends.exe
