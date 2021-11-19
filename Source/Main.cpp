@@ -105,6 +105,13 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
                     parsingState = Parse_Inclusive;
                 else if (TextDetection(textLine, "EXCLUSIVE"))
                     parsingState = Parse_Exclusive;
+                else
+                {
+                    std::string text = ToString("Unknown section title in config file: %s", textLine.c_str());
+                    DebugPrint(text.c_str());
+                    printf(text.c_str());
+                    break;
+                }
 
                 break;
             }
@@ -229,12 +236,15 @@ int main()
         {
             //kill miner
             //minerProcess.Pause();
+            //EndProcess(programSettings.executableName);
             minerProcess.End();
+            //start-process 'C:\Program Files (x86)\MSI Afterburner\MSIAfterburner.exe' -ArgumentList "-profile1"
         }
         else
         {
             //check if miner is runnning and start if not
             minerProcess.Start();
+            //start-process 'C:\Program Files (x86)\MSI Afterburner\MSIAfterburner.exe' -ArgumentList "-profile2"
         }
 
         Sleep(programSettings.UpdateRate);

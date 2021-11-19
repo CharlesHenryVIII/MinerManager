@@ -419,11 +419,26 @@ void Process::Pause()
 
 void Process::End(uint32 exitCode)
 {
-    if (m_info && m_info->hProcess)
+    if (m_isValid && m_running && m_info && m_info->hProcess)
     {
         TerminateProcess(m_info->hProcess, exitCode);
         CloseHandles();
         m_isValid = false;
+        m_running = false;
+        m_info = {};
+    }
+}
+
+
+void EndProcess(const std::vector<ProcessInfo>& output, std::string processName)
+{
+    for (const ProcessInfo& p : output)
+    {
+        if (FindStringCaseInsensitive(processName, p.name))
+        {
+
+            //kill process
+        }
     }
 }
 
