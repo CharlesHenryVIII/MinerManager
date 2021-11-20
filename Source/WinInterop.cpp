@@ -203,6 +203,22 @@ void DebugPrint(const char* fmt, ...)
     va_end(list);
 }
 
+static const char* s_consoleColors[ConsoleColor_Count] = {
+    "\033[0;30m",
+    "\033[0;31m",
+    "\033[0;32m",
+    "\033[0;33m",
+    "\033[0;34m",
+    "\033[0;35m",
+    "\033[0;36m",
+    "\033[0;37m",
+};
+
+void ConsoleOutput(const std::string& text, ConsoleColor color)
+{
+    printf("%s%s%s\n", s_consoleColors[color], text.c_str(), s_consoleColors[ConsoleColor_White]);
+}
+
 std::string ToString(const char* fmt, ...)
 {
     va_list args;
@@ -397,12 +413,13 @@ void Process::Start(const char* arguments)
         }
         case 3:
         {
-            error = ToString("the system cannot find the path specified \"%s\"", m_fileLocation.c_str());
+            error = ToString("The system cannot find the path specified \"%s\"", m_fileLocation.c_str());
             break;
         }
         }
-        DebugPrint("CreateProcessA error: %i, %s", CreateProcessError, error.c_str());
-        CreateErrorWindow(ToString("CreateProcessA error: %i", CreateProcessError, error.c_str()).c_str());
+        DebugPrint("${red}CreateProcessA error: %i, %s${normal}", CreateProcessError, error.c_str());
+        ConsoleOutput(ToString("CreateProcessA error: %i", CreateProcessError, error.c_str()), ConsoleColor_Red);
+        CreateErrorWindow(ToString("${red}CreateProcessA error: %i${normal}", CreateProcessError, error.c_str()).c_str());
         assert(false);
         End(0);
     }

@@ -110,7 +110,7 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
                 {
                     std::string text = ToString("Unknown section title in config file: %s", textLine.c_str());
                     DebugPrint(text.c_str());
-                    printf(text.c_str());
+                    ConsoleOutput(text.c_str(), ConsoleColor_White);
                     break;
                 }
 
@@ -183,12 +183,12 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
             }
         }
     }
-    printf("MinerManager settings updated\n");
+    ConsoleOutput("MinerManager settings updated", ConsoleColor_White);
 }
 
 int main()
 {
-    printf("MinerManager Started\n");
+    ConsoleOutput("MinerManager started", ConsoleColor_Green);
     Settings programSettings = {};
     uint64 lastTimeConfigWasModified = {};
 
@@ -251,10 +251,9 @@ int main()
                 //kill miner
                 minerProcess.End();
 
-                //start-process 'C:\Program Files (x86)\MSI Afterburner\MSIAfterburner.exe' -ArgumentList "-profile1"
-                std::string arguments = "-argumentList \"-profile1\"";
-                afterburner.Start(arguments.c_str());
+                afterburner.Start("-argumentList \"-profile1\"");
 
+                ConsoleOutput("Game found, miner ended", ConsoleColor_Cyan);
                 currentlyMining = false;
             }
             else
@@ -262,10 +261,9 @@ int main()
                 //check if miner is runnning and start if not
                 minerProcess.StartWithCheck();
 
-                //start-process 'C:\Program Files (x86)\MSI Afterburner\MSIAfterburner.exe' -ArgumentList "-profile2"
-                std::string arguments = "-argumentList \"-profile2\"";
-                afterburner.Start(arguments.c_str());
+                afterburner.Start("-argumentList \"-profile2\"");
 
+                ConsoleOutput("Miner started", ConsoleColor_Green);
                 currentlyMining = true;
             }
         }
@@ -273,8 +271,7 @@ int main()
         Sleep(programSettings.UpdateRate);
     }
 
-    std::string arguments = "-argumentList \"-profile1\"";
-    afterburner.Start(arguments.c_str());
+    afterburner.Start("-argumentList \"-profile1\"");
     afterburner.End();
     minerProcess.End();
 

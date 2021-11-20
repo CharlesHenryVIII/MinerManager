@@ -75,7 +75,20 @@ struct ProcessInfo {
     uint32 id;
 };
 
+enum ConsoleColor : int32 {
+    ConsoleColor_Black,
+    ConsoleColor_Red,
+    ConsoleColor_Green,
+    ConsoleColor_Yellow,
+    ConsoleColor_Blue,
+    ConsoleColor_Purple,
+    ConsoleColor_Cyan,
+    ConsoleColor_White,
+    ConsoleColor_Count,
+};
+
 void DebugPrint(const char* fmt, ...);
+void ConsoleOutput(const std::string& text, ConsoleColor color = ConsoleColor_White);
 std::string ToString(const char* fmt, ...);
 void SetThreadName(std::thread::native_handle_type threadID, std::string name);
 bool CreateFolder(const std::string& folderLocation);
