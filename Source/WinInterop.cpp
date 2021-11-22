@@ -2,6 +2,7 @@
 
 #include "Utility.h"
 
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <shlobj_core.h>
 #include <string>
@@ -388,7 +389,7 @@ void Process::Start(const char* arguments)
     m_info = new PROCESS_INFORMATION();
     ZeroMemory(m_info, sizeof(*m_info));
 
-    BOOL result = CreateProcessA(
+    BOOL result = CreateProcess(
         m_fileLocation.c_str(), //[in, optional]        LPCSTR                  lpApplicationName,
         lpCommandLine,          //[in, out, optional]   LPSTR                   lpCommandLine,
         &processAttributes,     //[in, optional]        LPSECURITY_ATTRIBUTES   lpProcessAttributes,
@@ -467,19 +468,6 @@ void Process::End(uint32 exitCode)
         m_info = {};
     }
 }
-
-
-//void EndProcess(const std::vector<ProcessInfo>& output, std::string processName)
-//{
-//    for (const ProcessInfo& p : output)
-//    {
-//        if (FindStringCaseInsensitive(processName, p.name))
-//        {
-//
-//            //kill process
-//        }
-//    }
-//}
 
 #include <chrono>
 #include <thread>

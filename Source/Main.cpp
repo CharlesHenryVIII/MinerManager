@@ -1,6 +1,8 @@
+#include "Main.h" //maybe dont do this?????
 #include "WinInterop.h"
 #include "DefaultConfig.h"
 #include "Utility.h"
+#include "ProcessSwitching.h"
 
 const char* configFileName = "MinerManager.config";
 
@@ -81,7 +83,7 @@ bool GetUpdatedFileInfo(std::vector<std::string>& fileText, uint64& lastModified
     return true;
 }
 
-void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& programSettings, std::vector<std::string>& inclusiveText, std::vector<std::string>& exclusiveText)
+void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& s_programSettings, std::vector<std::string>& s_inclusiveText, std::vector<std::string>& s_exclusiveText)
 {
     std::vector<std::string> configFileText;
     if (!GetUpdatedFileInfo(configFileText, lastTimeSettingsWereModified))
@@ -141,12 +143,12 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
                     if (key.find("UpdateRate") != std::string::npos)
                     {
                         float valueTranslated = std::stof(value);
-                        programSettings.UpdateRate = valueTranslated;
+                        s_programSettings.UpdateRate = valueTranslated;
                         break;
                     }
                     else if (key.find("ExecutableName") != std::string::npos)
                     {
-                        programSettings.executableName = value;
+                        s_programSettings.executableName = value;
                         break;
                     }
                     else if (key.find("AfterburnerLocation") != std::string::npos)
@@ -156,7 +158,7 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
                             split.after.erase(0, 1);
                         while (split.after[split.after.size() - 1] == '\n' || split.after[split.after.size() - 1] == ' ')
                             split.after.erase(split.after.size() - 1, 1);
-                        programSettings.afterburnerLocation = split.after;
+                        s_programSettings.afterburnerLocation = split.after;
                         break;
                     }
                 }
@@ -165,7 +167,7 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
                     CleanString(textLine, false);
                     if (textLine != "")
                     {
-                        inclusiveText.push_back(textLine);
+                        s_inclusiveText.push_back(textLine);
                         c = (int32)textLine.size() - 1;
                     }
                     break;
@@ -175,7 +177,7 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
                     CleanString(textLine, false);
                     if (textLine != "")
                     {
-                        exclusiveText.push_back(textLine);
+                        s_exclusiveText.push_back(textLine);
                         c = (int32)textLine.size() - 1;
                     }
                     break;
@@ -186,94 +188,74 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
     ConsoleOutput("MinerManager settings updated", ConsoleColor_White);
 }
 
-int main()
+int32 ThreadMain(void* data)
 {
     ConsoleOutput("MinerManager started", ConsoleColor_Green);
-    Settings programSettings = {};
-    uint64 lastTimeConfigWasModified = {};
+    Settings s_programSettings = {};
+    uint64 s_lastTimeConfigWasModified = {};
 
-    std::vector<std::string> inclusiveText;
-    std::vector<std::string> exclusiveText;
+    std::vector<std::string> s_inclusiveText;
+    std::vector<std::string> s_exclusiveText;
 
-    UpdateSettingsAndTextLists(lastTimeConfigWasModified, programSettings, inclusiveText, exclusiveText);
+    UpdateSettingsAndTextLists(s_lastTimeConfigWasModified, s_programSettings, s_inclusiveText, s_exclusiveText);
 
-    bool running = true;
-#if _DEBUG
-    //Process minerProcess("InfiniteSplat.exe");
-    Process minerProcess(programSettings.executableName);
-    Process afterburner(programSettings.afterburnerLocation);
-#else
-    Process minerProcess(programSettings.executableName);
-    Process afterburner(programSettings.afterburnerLocation);
-#endif
-    std::vector<ProcessInfo> processList;
-    processList.reserve(500);
-    bool currentlyMining = false;
+    ProcessSwitchingInit(s_programSettings.executableName, s_programSettings.afterburnerLocation);
+
+    std::vector<ProcessInfo> s_processList;
+    s_processList.reserve(500);
     bool foundGame = false;
-    bool appRunning = true;
-    //for (int32 loop = 0; loop < 5; loop++)
-    while (appRunning)
-    {
-        UpdateSettingsAndTextLists(lastTimeConfigWasModified, programSettings, inclusiveText, exclusiveText);
-        GetFullProcessList(processList);
 
-        //for (const ProcessInfo& process : processList)
-        foundGame = false;
-        for (int32 i = 0; i < processList.size(); i++)
+    while (g_appRunning)
+    {
+        if (g_updating)
         {
-            const ProcessInfo& process = processList[i];
-            for (const std::string& t : exclusiveText)
+            UpdateSettingsAndTextLists(s_lastTimeConfigWasModified, s_programSettings, s_inclusiveText, s_exclusiveText);
+            GetFullProcessList(s_processList);
+
+            //for (const ProcessInfo& process : s_processList)
+            foundGame = false;
+            for (int32 i = 0; i < s_processList.size(); i++)
             {
-                if (t == process.name)
+                const ProcessInfo& process = s_processList[i];
+                for (const std::string& t : s_exclusiveText)
                 {
-                    foundGame = true;
-                    break;
-                }
-            }
-            if (!foundGame)
-            {
-                for (const std::string& t : inclusiveText)
-                {
-                    if (FindStringCaseInsensitive(process.name, t))
+                    if (t == process.name)
                     {
                         foundGame = true;
                         break;
                     }
                 }
+                if (!foundGame)
+                {
+                    for (const std::string& t : s_inclusiveText)
+                    {
+                        if (FindStringCaseInsensitive(process.name, t))
+                        {
+                            foundGame = true;
+                            break;
+                        }
+                    }
+                }
+                if (foundGame)
+                    break;
             }
-            if (foundGame)
-                break;
-        }
-        if (foundGame == currentlyMining)
-        {
-            if (foundGame)
+            if (foundGame == g_currentlyMining)
             {
-                //kill miner
-                minerProcess.End();
-
-                afterburner.Start("-argumentList \"-profile1\"");
-
-                ConsoleOutput("Game found, miner ended", ConsoleColor_Cyan);
-                currentlyMining = false;
+                if (foundGame)
+                {
+                    ProcessSwitchingEndMiner();
+                }
+                else
+                {
+                    ProcessSwitchingStartMiner();
+                }
             }
-            else
-            {
-                //check if miner is runnning and start if not
-                minerProcess.StartWithCheck();
-
-                afterburner.Start("-argumentList \"-profile2\"");
-
-                ConsoleOutput("Miner started", ConsoleColor_Green);
-                currentlyMining = true;
-            }
+            Sleep(s_programSettings.UpdateRate);
         }
 
-        Sleep(programSettings.UpdateRate);
+        Sleep(5);
     }
 
-    afterburner.Start("-argumentList \"-profile1\"");
-    afterburner.End();
-    minerProcess.End();
-
+    ProcessSwitchingEndMiner();
     return 0;
 }
