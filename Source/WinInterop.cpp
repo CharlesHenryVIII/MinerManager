@@ -273,6 +273,7 @@ int32 CreateMessageWindow(const char* message, const char* title, uint32 type)
 
 void CreateErrorWindow(const char* message)
 {
+    assert(false);
     CreateMessageWindow(message, "ERROR", MB_OK);
 }
 

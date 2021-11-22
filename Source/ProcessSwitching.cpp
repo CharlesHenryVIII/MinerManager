@@ -1,9 +1,10 @@
 #include "ProcessSwitching.h"
 #include "WinInterop.h"
 
-std::atomic<bool> g_appRunning  = true;
-std::atomic<bool> g_updating    = true;
-bool g_currentlyMining          = false;
+std::atomic<uint32> g_messageFromMainToProcess  = 0;
+std::atomic<bool>   g_appRunning                = true;
+std::atomic<bool>   g_updating                  = true;
+bool                g_currentlyMining           = false;
 
 Process* miner;
 Process* afterburner;

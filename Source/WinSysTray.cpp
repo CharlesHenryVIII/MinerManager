@@ -7,6 +7,7 @@
 #include <Windows.h>
 #include <shellapi.h>
 #include <commctrl.h>
+#include <thread>
 
 #define	WM_USER_SHELLICON WM_USER + 1
 
@@ -64,6 +65,7 @@ BOOL InitInstance(int32 nCmdShow)
     return TRUE;
 }
 
+#include "shellapi.h"
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     int32 wmEvent;
@@ -120,30 +122,37 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case IDM_START:
         {
 
-            if (g_updating)
-                CreateErrorWindow("Trying to start process thats already started");
-            g_updating = true;
+            g_messageFromMainToProcess |= THREAD_MESSAGE_START;
             break;
         }
         case IDM_STOP:
         {
 
-            if (!g_updating)
-                CreateErrorWindow("Trying to stop process thats already stopped");
-            g_updating = false;
+            g_messageFromMainToProcess |= THREAD_MESSAGE_STOP;
             break;
         }
         case IDM_CONFIG:
         {
             //not sure how to do this
+#if 0
+            HINSTANCE errorResult = ShellExecute(NULL, "open", "MinerManager.config", NULL, NULL, NULL);
+            if ((INT_PTR)errorResult <= 32)
+            {
+                //ERROR_FILE_NOT_FOUND
+                DWORD error = GetLastError();
+                CreateErrorWindow(ToString("Could not open MinerManager.config, error: %i", error).c_str());
+            }
+#else
+            system("MinerManager.config");
+#endif
             break;
         }
         case IDM_EXIT:
         {
 
+            g_messageFromMainToProcess |= THREAD_MESSAGE_EXIT;
             Shell_NotifyIcon(NIM_DELETE, &g_notifyData);
             DestroyWindow(hWnd);
-            g_appRunning = false;
             break;
         }
         default:
@@ -153,7 +162,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
     {
 
-        g_appRunning = false;
+        g_messageFromMainToProcess |= THREAD_MESSAGE_EXIT;
         PostQuitMessage(0);
         break;
     }
@@ -163,7 +172,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-#include <thread>
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int32 nCmdShow)
 {
     //Register class
@@ -207,22 +215,21 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdL
     }
 
     //HACCEL accelTable = LoadAccelerators(hInstance, g_windowClass);
-    std::thread mainThread = std::thread(&ThreadMain, nullptr);
-    SetThreadName(mainThread.native_handle(), "Process Thread");
+    std::thread processThread = std::thread(&ThreadMain, nullptr);
+    SetThreadName(processThread.native_handle(), "Process Thread");
 
     MSG msg;
-    while (g_appRunning)
+    // Main message loop:
+    while (GetMessage(&msg, NULL, 0, 0))
     {
-        // Main message loop:
-        while (GetMessage(&msg, NULL, 0, 0))
+        //if (!TranslateAccelerator(msg.hwnd, accelTable, &msg))
         {
-            //if (!TranslateAccelerator(msg.hwnd, accelTable, &msg))
-            {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-            }
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
         }
     }
+    processThread.join();
+
 
     return (int) msg.wParam;
 }

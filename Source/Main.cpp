@@ -207,6 +207,27 @@ int32 ThreadMain(void* data)
 
     while (g_appRunning)
     {
+        uint32 messageFlags = g_messageFromMainToProcess.exchange(0);
+        if (messageFlags & THREAD_MESSAGE_START)
+        {
+            if (g_updating)
+                CreateErrorWindow("Trying to start process thats already started");
+            g_updating = true;
+        }
+        if (messageFlags & THREAD_MESSAGE_STOP)
+        {
+            if (!g_updating)
+                CreateErrorWindow("Trying to stop process thats already stopped");
+            ProcessSwitchingEndMiner();
+            g_updating = false;
+        }
+        if (messageFlags & THREAD_MESSAGE_EXIT)
+        {
+            g_appRunning = false;
+            g_updating   = false;
+            break;
+        }
+
         if (g_updating)
         {
             UpdateSettingsAndTextLists(s_lastTimeConfigWasModified, s_programSettings, s_inclusiveText, s_exclusiveText);

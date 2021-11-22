@@ -6,6 +6,7 @@
 #include <string>
 
 #define arrsize(arr__) (sizeof(arr__) / sizeof(arr__[0]))
+#define BIT(num) (1<<(num))
 
 struct SplitText {
     std::string before;
