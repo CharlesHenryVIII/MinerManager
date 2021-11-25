@@ -13,7 +13,8 @@ extern std::atomic<bool>    g_appRunning;
 extern std::atomic<bool>    g_updating;
 extern bool                 g_currentlyMining;
 
+struct Settings;
 void ProcessSwitchingInit(const std::string& minerFileLocation, const std::string& afterburnerFileLocation);
-void ProcessSwitchingEndMiner();
-void ProcessSwitchingStartMiner();
+void ProcessSwitchingEndMiner(const Settings& settings);
+void ProcessSwitchingStartMiner(const Settings& settings);
 

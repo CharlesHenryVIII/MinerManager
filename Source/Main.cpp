@@ -6,12 +6,6 @@
 
 const char* configFileName = "MinerManager.config";
 
-struct Settings {
-    float UpdateRate;
-    std::string executableName;
-    std::string afterburnerLocation;
-};
-
 enum ParseState {
     Parse_None,
     Parse_Settings,
@@ -135,7 +129,6 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
                     {
                         assert(false);
                         CreateErrorWindow(ToString("unknown string array format: %s", textLine.c_str()).c_str());
-                        //return 1;
                     }
                     const std::string& key = keyValue.before;
                     const std::string& value = keyValue.after;
@@ -160,6 +153,11 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
                             split.after.erase(split.after.size() - 1, 1);
                         s_programSettings.afterburnerLocation = split.after;
                         break;
+                    }
+                    else if (key.find("StartProcessesMinimized") != std::string::npos)
+                    {
+                        bool result = FindStringCaseInsensitive(value, "true") || (value == "1");
+                        s_programSettings.startProcessesMinimized = result;
                     }
                 }
                 if (parsingState == Parse_Inclusive)
@@ -218,7 +216,7 @@ int32 ThreadMain(void* data)
         {
             if (!g_updating)
                 CreateErrorWindow("Trying to stop process thats already stopped");
-            ProcessSwitchingEndMiner();
+            ProcessSwitchingEndMiner(s_programSettings);
             g_updating = false;
         }
         if (messageFlags & THREAD_MESSAGE_EXIT)
@@ -264,11 +262,11 @@ int32 ThreadMain(void* data)
             {
                 if (foundGame)
                 {
-                    ProcessSwitchingEndMiner();
+                    ProcessSwitchingEndMiner(s_programSettings);
                 }
                 else
                 {
-                    ProcessSwitchingStartMiner();
+                    ProcessSwitchingStartMiner(s_programSettings);
                 }
             }
             Sleep(s_programSettings.UpdateRate);
@@ -277,6 +275,6 @@ int32 ThreadMain(void* data)
         Sleep(5);
     }
 
-    ProcessSwitchingEndMiner();
+    ProcessSwitchingEndMiner(s_programSettings);
     return 0;
 }

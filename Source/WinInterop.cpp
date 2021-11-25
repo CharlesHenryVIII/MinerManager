@@ -1,4 +1,5 @@
 #include "WinInterop.h"
+#include "Main.h"
 
 #include "Utility.h"
 
@@ -346,7 +347,7 @@ Process::~Process()
 
 //void Process::Start(char* arguments)
 //void Process::Start(std::string& arguments)
-void Process::StartWithCheck(const char* arguments)
+void Process::StartWithCheck(const Settings& settings, const char* arguments)
 {
     if (m_isValid)
     {
@@ -364,10 +365,10 @@ void Process::StartWithCheck(const char* arguments)
         }
         return;
     }
-    Start(arguments);
+    Start(settings, arguments);
 }
 
-void Process::Start(const char* arguments)
+void Process::Start(const Settings& settings, const char* arguments)
 {
     LPSTR lpCommandLine = const_cast<char*>(arguments);
 
@@ -383,24 +384,30 @@ void Process::Start(const char* arguments)
 
     DWORD newProcessFlags = CREATE_NEW_CONSOLE | NORMAL_PRIORITY_CLASS;
 
+    int32 showWindowFlags = SW_SHOWDEFAULT;
+    if (settings.startProcessesMinimized)
+        showWindowFlags = SW_MINIMIZE;
+
     STARTUPINFOA startupInfo;
     ZeroMemory(&startupInfo, sizeof(startupInfo));
+    startupInfo.dwFlags = STARTF_USESHOWWINDOW;
+    startupInfo.wShowWindow = showWindowFlags;
     startupInfo.cb = sizeof(startupInfo);
 
     m_info = new PROCESS_INFORMATION();
     ZeroMemory(m_info, sizeof(*m_info));
 
     BOOL result = CreateProcess(
-        m_fileLocation.c_str(), //[in, optional]        LPCSTR                  lpApplicationName,
-        lpCommandLine,          //[in, out, optional]   LPSTR                   lpCommandLine,
-        &processAttributes,     //[in, optional]        LPSECURITY_ATTRIBUTES   lpProcessAttributes,
-        &threadAttributes,      //[in, optional]        LPSECURITY_ATTRIBUTES   lpThreadAttributes,
-        true,                   //[in]                  BOOL                    bInheritHandles,
-        newProcessFlags,        //[in]                  DWORD                   dwCreationFlags,
-        NULL,                   //[in, optional]        LPVOID                  lpEnvironment,
-        NULL,                   //[in, optional]        LPCSTR                  lpCurrentDirectory,
-        &startupInfo,           //[in]                  LPSTARTUPINFOA          lpStartupInfo,
-        m_info                  //[out]                 LPPROCESS_INFORMATION   lpProcessInformation
+        m_fileLocation.c_str(), //LPCSTR                  lpApplicationName,
+        lpCommandLine,          //LPSTR                   lpCommandLine,
+        &processAttributes,     //LPSECURITY_ATTRIBUTES   lpProcessAttributes,
+        &threadAttributes,      //LPSECURITY_ATTRIBUTES   lpThreadAttributes,
+        true,                   //BOOL                    bInheritHandles,
+        newProcessFlags,        //DWORD                   dwCreationFlags,
+        NULL,                   //LPVOID                  lpEnvironment,
+        NULL,                   //LPCSTR                  lpCurrentDirectory,
+        &startupInfo,           //LPSTARTUPINFOA          lpStartupInfo,
+        m_info                  //LPPROCESS_INFORMATION   lpProcessInformation
     );
     if (result == 0)
     {
@@ -421,7 +428,7 @@ void Process::Start(const char* arguments)
         }
         DebugPrint("${red}CreateProcessA error: %i, %s${normal}", CreateProcessError, error.c_str());
         ConsoleOutput(ToString("CreateProcessA error: %i", CreateProcessError, error.c_str()), ConsoleColor_Red);
-        CreateErrorWindow(ToString("${red}CreateProcessA error: %i${normal}", CreateProcessError, error.c_str()).c_str());
+        CreateErrorWindow(ToString("CreateProcessA error: %i", CreateProcessError, error.c_str()).c_str());
         assert(false);
         End(0);
     }

@@ -5,6 +5,7 @@ R"term(#This is the configuration file for MinerManager
 
 $SETTINGS$
 UpdateRate=5 #Seconds
+StartProcessesMinimized = true
 ExecutableName = PhoenixMiner.exe #Either the full path or the local path to the miner executable
 AfterburnerLocation = C:\Program Files (x86)\MSI Afterburner\MSIAfterburner.exe
 
