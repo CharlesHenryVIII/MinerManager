@@ -87,7 +87,7 @@ bool File::FileDestructor()
 }
 
 File::~File()
-{   
+{
     if (m_handleIsValid)
     {
         FileDestructor();
@@ -245,7 +245,7 @@ typedef struct tagTHREADNAME_INFO
     DWORD dwFlags; // Reserved for future use, must be zero.
  } THREADNAME_INFO;
 #pragma pack(pop)
-void SetThreadName(DWORD dwThreadID, const char* threadName) 
+void SetThreadName(DWORD dwThreadID, const char* threadName)
 {
     THREADNAME_INFO info;
     info.dwType = 0x1000;
@@ -275,7 +275,7 @@ int32 CreateMessageWindow(const char* message, const char* title, uint32 type)
 void CreateErrorWindow(const char* message)
 {
     assert(false);
-    CreateMessageWindow(message, "ERROR", MB_OK);
+    CreateMessageWindow(message, "MinerManager ERROR", MB_OK);
 }
 
 #include <stdio.h>
@@ -283,7 +283,7 @@ void CreateErrorWindow(const char* message)
 #include <psapi.h>
 
 void GetFullProcessList(std::vector<ProcessInfo>& output)
-{   
+{
     output.clear();
     // Get processes
     DWORD processIDs[PROCESS_COUNT] = {};
@@ -292,10 +292,7 @@ void GetFullProcessList(std::vector<ProcessInfo>& output)
         return;
 
 
-    // Calculate how many process identifiers were returned.
-    int32 processCount = bytesUsedInProcessIDs / sizeof(DWORD);
-
-    // Print the name and process identifier for each process.
+    const int32 processCount = bytesUsedInProcessIDs / sizeof(DWORD);
     for (int32 i = 0; i < processCount; i++)
     {
         if (processIDs[i] != 0)
@@ -303,7 +300,7 @@ void GetFullProcessList(std::vector<ProcessInfo>& output)
             DWORD& processID = processIDs[i];
 
             // Get a handle to the process.
-            HANDLE processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID); 
+            HANDLE processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
 
             // Get the process name.
             TCHAR processName[MAX_PATH] = TEXT("<unknown>");
@@ -312,8 +309,7 @@ void GetFullProcessList(std::vector<ProcessInfo>& output)
                 HMODULE moduleHandles;
                 DWORD bytesUsedInModuleHandles;
 
-                if (EnumProcessModules(processHandle, &moduleHandles, sizeof(moduleHandles),
-                    &bytesUsedInModuleHandles))
+                if (EnumProcessModules(processHandle, &moduleHandles, sizeof(moduleHandles), &bytesUsedInModuleHandles))
                 {
                     GetModuleBaseName(processHandle, moduleHandles, processName, sizeof(processName) / sizeof(TCHAR));
                     //process is valid
@@ -337,6 +333,22 @@ void GetFullProcessList(std::vector<ProcessInfo>& output)
     }
 }
 
+bool GetExistingProcessInformation(const std::string& executableName, uint32& processID)
+{
+    std::vector<ProcessInfo> processList;
+    processList.reserve(500);
+    GetFullProcessList(processList);
+    for (const ProcessInfo& pi : processList)
+    {
+        if (pi.name == executableName)
+        {
+            processID = pi.id;
+            return true;
+        }
+    }
+    return false;
+}
+
 Process::~Process()
 {
     if (m_isValid)
@@ -345,25 +357,17 @@ Process::~Process()
     }
 }
 
-//void Process::Start(char* arguments)
-//void Process::Start(std::string& arguments)
 void Process::StartWithCheck(const Settings& settings, const char* arguments)
 {
-    if (m_isValid)
+    // TODO(choman): search current proccesses to see if one is already running and capture the handle/process information
     {
-        if (!m_running)
+        uint32 processID;
+        if (GetExistingProcessInformation(m_exeName, processID))
         {
-            DWORD resumeStatus = ResumeThread(m_info->hThread);
-            if (resumeStatus == -1)
-            {
-                DWORD resumeError = GetLastError();
-                DebugPrint("ResumeThread error: %i", resumeError);
-                assert(false);
-            }
-            else
-                m_running = true;
+            m_processID = processID;
+            m_isValid = true;
+            return;
         }
-        return;
     }
     Start(settings, arguments);
 }
@@ -394,8 +398,7 @@ void Process::Start(const Settings& settings, const char* arguments)
     startupInfo.wShowWindow = showWindowFlags;
     startupInfo.cb = sizeof(startupInfo);
 
-    m_info = new PROCESS_INFORMATION();
-    ZeroMemory(m_info, sizeof(*m_info));
+    _PROCESS_INFORMATION pi = {};
 
     BOOL result = CreateProcess(
         m_fileLocation.c_str(), //LPCSTR                  lpApplicationName,
@@ -407,73 +410,81 @@ void Process::Start(const Settings& settings, const char* arguments)
         NULL,                   //LPVOID                  lpEnvironment,
         NULL,                   //LPCSTR                  lpCurrentDirectory,
         &startupInfo,           //LPSTARTUPINFOA          lpStartupInfo,
-        m_info                  //LPPROCESS_INFORMATION   lpProcessInformation
+        &pi                     //LPPROCESS_INFORMATION   lpProcessInformation
     );
     if (result == 0)
     {
         DWORD CreateProcessError = GetLastError();
         std::string error;
+        bool knownError = false;
         switch (CreateProcessError)
         {
         case 740:
         {
             error = "Program needs to be ran as administrator";
+            knownError = true;
             break;
         }
         case 3:
         {
             error = ToString("The system cannot find the path specified \"%s\"", m_fileLocation.c_str());
+            knownError = true;
             break;
         }
         }
-        DebugPrint("${red}CreateProcessA error: %i, %s${normal}", CreateProcessError, error.c_str());
-        ConsoleOutput(ToString("CreateProcessA error: %i", CreateProcessError, error.c_str()), ConsoleColor_Red);
-        CreateErrorWindow(ToString("CreateProcessA error: %i", CreateProcessError, error.c_str()).c_str());
+        if (knownError)
+        {
+            DebugPrint("${red}CreateProcessA error: %s${normal}", error.c_str());
+            ConsoleOutput(ToString("CreateProcessA error: %s", error.c_str()), ConsoleColor_Red);
+            CreateErrorWindow(ToString("CreateProcessA error: %s", error.c_str()).c_str());
+        }
+        else
+        {
+            DebugPrint("${red}CreateProcessA error: %i${normal}", CreateProcessError);
+            ConsoleOutput(ToString("CreateProcessA error: %i", CreateProcessError, ConsoleColor_Red));
+            CreateErrorWindow(ToString("CreateProcessA error: %i", CreateProcessError).c_str());
+        }
         assert(false);
         End(0);
     }
     else
     {
+        m_processID = pi.dwProcessId;
+        CloseHandles(pi);
         m_isValid = true;
-        m_running = true;
     }
 }
 
-void Process::CloseHandles()
+void Process::CloseHandles(const _PROCESS_INFORMATION& pi)
 {
-    CloseHandle(m_info->hProcess);
-    CloseHandle(m_info->hThread);
-}
-
-void Process::Pause()
-{
-    if (m_isValid)
-    {
-        if (m_running)
-        {
-            DWORD resumeStatus = SuspendThread(m_info->hThread);
-            if (resumeStatus == -1)
-            {
-                DWORD resumeError = GetLastError();
-                DebugPrint("SuspendThread error: %i", resumeError);
-                assert(false);
-            }
-            else
-                m_running = false;
-        }
-        return;
-    }
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
 }
 
 void Process::End(uint32 exitCode)
 {
-    if (m_isValid && m_running && m_info && m_info->hProcess)
+    if (m_isValid)
     {
-        TerminateProcess(m_info->hProcess, exitCode);
-        CloseHandles();
+        HANDLE processHandle = OpenProcess(DELETE | PROCESS_QUERY_INFORMATION | PROCESS_TERMINATE, FALSE, m_processID);
+        if (processHandle == NULL)
+        {
+            if (GetExistingProcessInformation(m_exeName, m_processID))
+            {
+                processHandle = OpenProcess(DELETE | PROCESS_QUERY_INFORMATION | PROCESS_TERMINATE, FALSE, m_processID);
+            }
+            else
+            {
+                //process isn't running exist
+                m_isValid = false;
+                m_processID = 0;
+                return;
+            }
+        }
+        TerminateProcess(processHandle, exitCode);
+        CloseHandle(processHandle);
+
         m_isValid = false;
-        m_running = false;
-        m_info = {};
+        m_processID = 0;
     }
 }
 

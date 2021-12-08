@@ -77,11 +77,37 @@ bool GetUpdatedFileInfo(std::vector<std::string>& fileText, uint64& lastModified
     return true;
 }
 
+enum GetSettingValueType {
+    SettingValueType_Invalid,
+    SettingValueType_Float,
+    SettingValueType_Bool,
+    SettingValueType_Exe,
+    SettingValueType_Count,
+};
+
+struct IndividualSetting {
+    std::string name;
+    GetSettingValueType dataType;
+    union D {
+        float number;
+        bool boo;
+        const char* fileName;
+    } d;
+};
+
 void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& s_programSettings, std::vector<std::string>& s_inclusiveText, std::vector<std::string>& s_exclusiveText)
 {
     std::vector<std::string> configFileText;
     if (!GetUpdatedFileInfo(configFileText, lastTimeSettingsWereModified))
         return;
+
+    IndividualSetting s_settingList[] = {
+        { "UpdateRate",                 SettingValueType_Float},
+        { "ExecutableName",             SettingValueType_Exe},
+        { "AfterburnerLocation",        SettingValueType_Exe},
+        { "StartProcessesMinimized",    SettingValueType_Bool},
+    };
+
 
     ParseState parsingState = Parse_None;
     std::vector<std::string> settingsText;
@@ -121,7 +147,7 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
             {
                 if (parsingState == Parse_Settings)
                 {
-                    const std::string original = textLine;
+                    std::string original = textLine;
                     CleanString(textLine, true);
                     //Organize string
                     SplitText keyValue = TextSplit(textLine.c_str(), "=");
@@ -133,6 +159,14 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
                     const std::string& key = keyValue.before;
                     const std::string& value = keyValue.after;
 
+                    for (const IndividualSetting& is : s_settingList)
+                    {
+                        if (key.find(is.name))
+                        {
+
+                        }
+                    }
+
                     if (key.find("UpdateRate") != std::string::npos)
                     {
                         float valueTranslated = std::stof(value);
@@ -141,11 +175,24 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
                     }
                     else if (key.find("ExecutableName") != std::string::npos)
                     {
-                        s_programSettings.executableName = value;
+                        const size_t hashLocation = original.find_first_of('#');
+                        if (hashLocation != std::string::npos)
+                            original.erase(hashLocation);
+
+                        SplitText split = TextSplit(original.c_str(), "=");
+                        while (split.after[0] == ' ')
+                            split.after.erase(0, 1);
+                        while (split.after[split.after.size() - 1] == '\n' || split.after[split.after.size() - 1] == ' ')
+                            split.after.erase(split.after.size() - 1, 1);
+                        s_programSettings.executableName = split.after;
                         break;
                     }
                     else if (key.find("AfterburnerLocation") != std::string::npos)
                     {
+                        const size_t hashLocation = original.find_first_of('#');
+                        if (hashLocation != std::string::npos)
+                            original.erase(hashLocation);
+
                         SplitText split = TextSplit(original.c_str(), "=");
                         while (split.after[0] == ' ')
                             split.after.erase(0, 1);
@@ -184,6 +231,11 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, Settings& 
         }
     }
     ConsoleOutput("MinerManager settings updated", ConsoleColor_White);
+}
+
+void UpdateConfigFile()
+{
+
 }
 
 int32 ThreadMain(void* data)

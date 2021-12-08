@@ -13,6 +13,24 @@ struct SplitText {
     std::string after;
 };
 
+template <typename T>
+[[nodiscard]] T Min(T a, T b)
+{
+    return a < b ? a : b;
+}
+
+ template <typename T>
+[[nodiscard]] T Max(T a, T b)
+{
+    return a > b ? a : b;
+}
+
+template <typename T>
+[[nodiscard]] T Clamp(T v, T min, T max)
+{
+    return Max(min, Min(max, v));
+}
+
 std::vector<int32> TextToIntArray(const char* text, const char lineEnd);
 std::vector<int32> TextToIntArray(const char* text);
 std::vector<int32> FileToIntArray(const char* fileName, const char lineEnd);

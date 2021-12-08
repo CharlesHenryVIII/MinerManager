@@ -3,9 +3,12 @@ std::string g_defaultConfigText =
 R"term(#This is the configuration file for MinerManager
 #Below are the default settings created when MinerManager.config is not found
 
+$INFORMATION$
+Version=0.1
+
 $SETTINGS$
 UpdateRate=5 #Seconds
-StartProcessesMinimized = true
+StartProcessesMinimized = true #This will start the miner process(es) minimized
 ExecutableName = PhoenixMiner.exe #Either the full path or the local path to the miner executable
 AfterburnerLocation = C:\Program Files (x86)\MSI Afterburner\MSIAfterburner.exe
 
@@ -18,9 +21,10 @@ F1_20 #F1_2019_dx12.exe and F1_2012.exe
 doom #DOOMx64vk.exe and DOOMEternalx64vk.exe
 civilization #CivilizationV_DX11.exe and CivilizationVI_DX12.exe
 EscapeFromTarkov #EscapeFromTarkov_BE.exe
-factorio
+halo
 
 $EXCLUSIVE$
+factorio.exe
 League of Legends.exe
 Brawler.exe
 vermintide3_dx12.exe
