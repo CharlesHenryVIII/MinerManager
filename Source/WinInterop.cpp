@@ -351,23 +351,24 @@ bool GetExistingProcessInformation(const std::string& executableName, uint32& pr
 
 Process::~Process()
 {
-    if (m_isValid)
-    {
-        End();
-    }
+    End();
 }
 
 void Process::StartWithCheck(const Settings& settings, const char* arguments)
 {
     // TODO(choman): search current proccesses to see if one is already running and capture the handle/process information
+    if (m_processID)
     {
-        uint32 processID;
-        if (GetExistingProcessInformation(m_exeName, processID))
-        {
-            m_processID = processID;
-            m_isValid = true;
+        HANDLE processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, m_processID);
+        if (processHandle != NULL)
             return;
-        }
+    }
+
+    uint32 processID;
+    if (GetExistingProcessInformation(m_exeName, processID))
+    {
+        m_processID = processID;
+        return;
     }
     Start(settings, arguments);
 }
@@ -451,7 +452,6 @@ void Process::Start(const Settings& settings, const char* arguments)
     {
         m_processID = pi.dwProcessId;
         CloseHandles(pi);
-        m_isValid = true;
     }
 }
 
@@ -463,28 +463,28 @@ void Process::CloseHandles(const _PROCESS_INFORMATION& pi)
 
 void Process::End(uint32 exitCode)
 {
-    if (m_isValid)
+    HANDLE processHandle = NULL;
+    if (m_processID)
     {
-        HANDLE processHandle = OpenProcess(DELETE | PROCESS_QUERY_INFORMATION | PROCESS_TERMINATE, FALSE, m_processID);
-        if (processHandle == NULL)
-        {
-            if (GetExistingProcessInformation(m_exeName, m_processID))
-            {
-                processHandle = OpenProcess(DELETE | PROCESS_QUERY_INFORMATION | PROCESS_TERMINATE, FALSE, m_processID);
-            }
-            else
-            {
-                //process isn't running exist
-                m_isValid = false;
-                m_processID = 0;
-                return;
-            }
-        }
+        processHandle = OpenProcess(DELETE | PROCESS_QUERY_INFORMATION | PROCESS_TERMINATE, FALSE, m_processID);
+    }
+    if (processHandle == NULL && GetExistingProcessInformation(m_exeName, m_processID))
+    {
+        processHandle = OpenProcess(DELETE | PROCESS_QUERY_INFORMATION | PROCESS_TERMINATE, FALSE, m_processID);
+    }
+
+    if (processHandle != NULL)
+    {
         TerminateProcess(processHandle, exitCode);
         CloseHandle(processHandle);
-
-        m_isValid = false;
         m_processID = 0;
+        return;
+    }
+    else
+    {
+        //process isn't running exist
+        m_processID = 0;
+        return;
     }
 }
 

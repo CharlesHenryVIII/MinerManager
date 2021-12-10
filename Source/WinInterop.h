@@ -92,7 +92,6 @@ private:
     uint32 m_processID = 0;
     std::string m_fileLocation;
     std::string m_exeName;
-    bool        m_isValid = false;
 };
 
 struct ProcessInfo {
