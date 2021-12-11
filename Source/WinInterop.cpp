@@ -1,5 +1,6 @@
 #include "WinInterop.h"
 #include "Main.h"
+#include "Settings.h"
 
 #include "Utility.h"
 
@@ -354,7 +355,7 @@ Process::~Process()
     End();
 }
 
-void Process::StartWithCheck(const Settings& settings, const char* arguments)
+void Process::StartWithCheck(const char* arguments)
 {
     // TODO(choman): search current proccesses to see if one is already running and capture the handle/process information
     if (m_processID)
@@ -370,10 +371,10 @@ void Process::StartWithCheck(const Settings& settings, const char* arguments)
         m_processID = processID;
         return;
     }
-    Start(settings, arguments);
+    Start(arguments);
 }
 
-void Process::Start(const Settings& settings, const char* arguments)
+void Process::Start(const char* arguments)
 {
     LPSTR lpCommandLine = const_cast<char*>(arguments);
 
@@ -390,7 +391,7 @@ void Process::Start(const Settings& settings, const char* arguments)
     DWORD newProcessFlags = CREATE_NEW_CONSOLE | NORMAL_PRIORITY_CLASS;
 
     int32 showWindowFlags = SW_SHOWDEFAULT;
-    if (settings.startProcessesMinimized)
+    if (g_settings[setting_StartProcessesMinimized].v_bool)
         showWindowFlags = SW_MINIMIZE;
 
     STARTUPINFOA startupInfo;

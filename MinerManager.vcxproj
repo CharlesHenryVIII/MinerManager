@@ -147,8 +147,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\DefaultConfig.cpp" />
     <ClCompile Include="Source\Main.cpp" />
     <ClCompile Include="Source\ProcessSwitching.cpp" />
+    <ClCompile Include="Source\Settings.cpp" />
     <ClCompile Include="Source\Utility.cpp" />
     <ClCompile Include="Source\WinInterop.cpp" />
     <ClCompile Include="Source\WinSysTray.cpp" />
@@ -158,6 +160,7 @@
     <ClInclude Include="Source\DefaultConfig.h" />
     <ClInclude Include="Source\Main.h" />
     <ClInclude Include="Source\ProcessSwitching.h" />
+    <ClInclude Include="Source\Settings.h" />
     <ClInclude Include="Source\Types.h" />
     <ClInclude Include="Source\Utility.h" />
     <ClInclude Include="Source\WinInterop.h" />

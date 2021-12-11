@@ -82,8 +82,8 @@ struct Process {
     ~Process();
 
     //void Start(char* arguments = nullptr);
-    void Start(const Settings& settings, const char* arguments = nullptr);
-    void StartWithCheck(const Settings& settings, const char* arguments = nullptr);
+    void Start(const char* arguments = nullptr);
+    void StartWithCheck(const char* arguments = nullptr);
     void End(uint32 exitCode = 0);
 
 private:

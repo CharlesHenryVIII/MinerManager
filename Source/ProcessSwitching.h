@@ -15,6 +15,6 @@ extern bool                 g_currentlyMining;
 
 struct Settings;
 void ProcessSwitchingInit(const std::string& minerFileLocation, const std::string& afterburnerFileLocation);
-void ProcessSwitchingEndMiner(const Settings& settings);
-void ProcessSwitchingStartMiner(const Settings& settings);
+void ProcessSwitchingEndMiner();
+void ProcessSwitchingStartMiner();
 

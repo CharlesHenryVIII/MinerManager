@@ -16,22 +16,22 @@ void ProcessSwitchingInit(const std::string& minerFileLocation, const std::strin
     afterburner = new Process(afterburnerFileLocation);
 }
 
-void ProcessSwitchingEndMiner(const Settings& settings)
+void ProcessSwitchingEndMiner()
 {
     miner->End();
 
-    afterburner->Start(settings, "-argumentList \"-profile1\"");
+    afterburner->Start("-argumentList \"-profile1\"");
 
     ConsoleOutput("Game found, miner ended", ConsoleColor_Cyan);
     g_currentlyMining = false;
 }
 
-void ProcessSwitchingStartMiner(const Settings& settings)
+void ProcessSwitchingStartMiner()
 {
     //check if miner is runnning and start if not
-    miner->StartWithCheck(settings);
+    miner->StartWithCheck();
 
-    afterburner->Start(settings, "-argumentList \"-profile2\"");
+    afterburner->Start("-argumentList \"-profile2\"");
 
     ConsoleOutput("Miner started", ConsoleColor_Green);
     g_currentlyMining = true;
