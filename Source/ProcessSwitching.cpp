@@ -13,7 +13,10 @@ Process* afterburner;
 void ProcessSwitchingInit(const std::string& minerFileLocation, const std::string& afterburnerFileLocation)
 {
     miner = new Process(minerFileLocation);
+    if (miner->CheckIfAlreadyRunning())
+        g_currentlyMining = true;
     afterburner = new Process(afterburnerFileLocation);
+    afterburner->CheckIfAlreadyRunning();
 }
 
 void ProcessSwitchingEndMiner()

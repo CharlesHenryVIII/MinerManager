@@ -47,4 +47,5 @@ std::vector<std::string> FileToStringArray(const char* fileName, const char* lin
 int32 NumberLengthInString(const std::string& string, int32& i);
 int32 StringToInt(const std::string& string, int32 i, int32 length);
 int32 StringToInt(const std::string& string, int32 i);
+bool FindString_ExactCaseInsensitive(const std::string& x, const std::string& y);
 bool FindStringCaseInsensitive(const std::string& str1, const std::string& str2);

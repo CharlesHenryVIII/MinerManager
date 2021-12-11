@@ -6,7 +6,7 @@
 
 #define SETTINGS_IMPLIMENTATION 3
 
-enum GetSettingValueType {
+enum SettingDataType {
     SettingValueType_Invalid,
     SettingValueType_Float,
     SettingValueType_Bool,
@@ -26,7 +26,7 @@ enum SettingOptions {
 
 struct IndividualSetting {
     std::string name;
-    GetSettingValueType dataType;
+    SettingDataType dataType;
     float       v_float;
     bool        v_bool;
     std::string v_string;
@@ -48,7 +48,7 @@ extern IndividualSetting g_settings[];
 
 struct IndividualSetting {
     std::string name;
-    GetSettingValueType dataType;
+    SettingDataType dataType;
     union {
         float v_float;
         bool  v_bool;
@@ -69,7 +69,7 @@ IndividualSetting g_settings[] = {
 
 struct IndividualSetting {
     std::string name;
-    GetSettingValueType dataType;
+    SettingDataType dataType;
     float       valueFloat  = {};
     bool        valueBool   = {};
     std::string valueString = {};
@@ -83,7 +83,7 @@ IndividualSetting g_settings[] ={{ "UpdateRate",                 SettingValueTyp
 #elif SETTINGS_IMPLIMENTATION == 0
 struct IndividualSetting {
     std::string name;
-    GetSettingValueType dataType;
+    SettingDataType dataType;
     float       valueFloat  = {};
     bool        valueBool   = {};
     std::string valueString = {};
@@ -112,5 +112,5 @@ Settings g_settings = {};
     //g_settings.UpdateRate.type;
 
 
-bool GetUpdatedFileInfo(std::vector<std::string>& fileText, uint64& lastModifiedTime);
+bool GetUpdatedFileInfo(std::vector<std::string>& fileTextArray, std::string& fileText, uint64& lastModifiedTime);
 void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, std::vector<std::string>& s_inclusiveText, std::vector<std::string>& s_exclusiveText);

@@ -355,23 +355,30 @@ Process::~Process()
     End();
 }
 
-void Process::StartWithCheck(const char* arguments)
+bool Process::CheckIfAlreadyRunning()
 {
     // TODO(choman): search current proccesses to see if one is already running and capture the handle/process information
     if (m_processID)
     {
         HANDLE processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, m_processID);
         if (processHandle != NULL)
-            return;
+            return true;
     }
 
     uint32 processID;
     if (GetExistingProcessInformation(m_exeName, processID))
     {
         m_processID = processID;
-        return;
+        return true;
     }
-    Start(arguments);
+    m_processID = 0;
+    return false;
+}
+
+void Process::StartWithCheck(const char* arguments)
+{
+    if (!CheckIfAlreadyRunning())
+        Start(arguments);
 }
 
 void Process::Start(const char* arguments)

@@ -32,27 +32,7 @@ BOOL InitInstance(int32 nCmdShow)
         CreateErrorWindow("Error: Could not create window handle");
         return FALSE;
     }
-#if 0
-    std::string iconFileLocation = "MinerManagerIcon.ico";
-    //const int32 iconFileLocationModifiedSize = 50;
-    //WCHAR iconFileLocationModified[iconFileLocationModifiedSize] = {};
-    //{
-    //    int32 multibyteToWideCharResult = MultiByteToWideChar(CP_ACP, MB_COMPOSITE, iconFileLocation.c_str(), (int32)iconFileLocation.size(), iconFileLocationModified, iconFileLocationModifiedSize);
-    //    if (multibyteToWideCharResult == NULL)
-    //    {
-    //        CreateErrorWindow("Could not convert string to wide");
-    //    }
-    //}
-    ::std::wstring location = L"MinerManagerIcon.ico";
-    HRESULT loadIconResult = LoadIconMetric(g_instance, (PCWSTR)location.c_str(), LIM_LARGE, &g_icon);
-    if (loadIconResult != S_OK)
-    {
-        CreateErrorWindow("Error loading applicaiton icon");
-    }
-#else
-
 	g_icon = LoadIcon(g_instance, MAKEINTRESOURCE(ICON_ID));
-#endif
 
     g_notifyData.cbSize = sizeof(NOTIFYICONDATA); // sizeof the struct in bytes 
     g_notifyData.hWnd = (HWND)windowHandle;              //handle of the window which will process this app. messages 

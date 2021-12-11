@@ -253,6 +253,32 @@ int32 StringToInt(const std::string& string, int32 i)
     return StringToInt(string, i, NumberLengthInString(string, i));
 }
 
+//bool FindString_AnyMatch()
+//{
+//    
+//}
+bool FindString_ExactCaseInsensitive(const std::string& x, const std::string& y)
+{
+    //This will not work correctly if either string has: ` { | } ~
+    if (x.size() == y.size())
+    {
+        for (int32 i = 0; i < x.size(); i++)
+        {
+            assert(x[i] != '`');
+            assert(x[i] <= 'z');
+            assert(y[i] != '`');
+            assert(y[i] <= 'z');
+
+            if ((x[i] & 0xdf) != (y[i] & 0xdf))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
 #include <algorithm>
 /// Try to find in the Haystack the Needle - ignore case
 bool FindStringCaseInsensitive(const std::string& str1, const std::string& str2)

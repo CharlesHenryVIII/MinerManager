@@ -9,9 +9,10 @@ Version = 0.1
 
 $SETTINGS$
 UpdateRate = 5.0 #Seconds
-StartProcessesMinimized = true #This will start the miner process(es) minimized
+testSetting = 3.2 #will this work?
 ExecutableName = PhoenixMiner.exe #Either the full path or the local path to the miner executable
 AfterburnerLocation = C:\Program Files (x86)\MSI Afterburner\MSIAfterburner.exe
+StartProcessesMinimized = true #This will start the miner process(es) minimized
 
 #Please list processes you would want the miner to stop for
 #Inclusives will stop the mining executible if the phrase is       found in      the process name and is case insensitive
@@ -25,7 +26,7 @@ EscapeFromTarkov #EscapeFromTarkov_BE.exe
 halo
 
 $EXCLUSIVE$
-factorio.exe
+Factorio.exe
 League of Legends.exe
 Brawler.exe
 vermintide3_dx12.exe
