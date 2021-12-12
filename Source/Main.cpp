@@ -56,19 +56,11 @@ int32 ThreadMain(void* data)
                 const ProcessInfo& process = s_processList[i];
                 for (const std::string& t : s_exclusiveText)
                 {
-#if 1
                     if (FindString_ExactCaseInsensitive(process.name, t))
                     {
                         foundGame = true;
                         break;
                     }
-#else
-                    if (t == process.name)
-                    {
-                        foundGame = true;
-                        break;
-                    }
-#endif
                 }
                 if (!foundGame)
                 {

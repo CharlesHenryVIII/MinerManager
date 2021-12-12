@@ -30,6 +30,14 @@ static DefaultSetting s_defaultSettings[] =
     { "true",                                                           "This will start the miner process(es) minimized" },
 };
 
+struct ConfigVersion {
+    int32 major;
+    int32 minor;
+};
+
+ConfigVersion g_configVerion = { 0, 1 };
+
+
 bool GetUpdatedFileInfo(std::vector<std::string>& fileTextArray, std::string& fileText, uint64& lastModifiedTime)
 {
     //Check for file not there, create it if its not, and fill it with the default config file
@@ -103,6 +111,7 @@ std::string ConfigFileGetValueExe(const std::string& input)
 
 enum ParseState {
     Parse_None,
+    Parse_Information,
     Parse_Settings,
     Parse_Inclusive,
     Parse_Exclusive,
@@ -140,11 +149,7 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, std::vecto
         if (!GetUpdatedFileInfo(configFileTextArray, configFileText, lastTimeSettingsWereModified))
             return;
 
-        size_t settingHeaderRowNumber = std::string::npos;
-        bool settingsFound[setting_Count] = {};
-        size_t settingsRowNumbers[setting_Count] = {};
-        memset(settingsRowNumbers, uint32(-1), sizeof(settingsRowNumbers));
-
+        size_t informationHeaderRowNumber = std::string::npos;
         ParseState parsingState = Parse_None;
         std::vector<std::string> settingsText;
         for (size_t k = 0; k < configFileTextArray.size(); k++)
@@ -159,10 +164,15 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, std::vecto
                 }
                 else if (character == '$')
                 {
-                    if (TextDetection(textLine, "SETTINGS"))
+
+                    if (TextDetection(textLine, "INFORMATION"))
+                    {
+                        parsingState = Parse_Information;
+                        informationHeaderRowNumber = k;
+                    }
+                    else if (TextDetection(textLine, "SETTINGS"))
                     {
                         parsingState = Parse_Settings;
-                        settingHeaderRowNumber = k;
                     }
                     else if (TextDetection(textLine, "INCLUSIVE"))
                     {
@@ -188,7 +198,35 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, std::vecto
                 }
                 else
                 {
-                    if (parsingState == Parse_Settings)
+                    if (parsingState == Parse_Information)
+                    {
+                        if (textLine == "")
+                            break;
+
+                        std::string cleanedTextLine = textLine;
+                        CleanString(cleanedTextLine);
+                       
+                        //Split string into string setting name and string value
+                        SplitText keyValue = TextSplit(cleanedTextLine.c_str(), "=");
+                        if (keyValue.before == "" || keyValue.after == "")
+                        {
+                            assert(false);
+                            CreateErrorWindow(ToString("unknown string array format: %s", cleanedTextLine.c_str()).c_str());
+                        }
+                        //very clean (remove spaces around equal sign
+                        CleanString(keyValue.before);
+                        CleanString(keyValue.after);
+                        const std::string& key = keyValue.before;
+                        const std::string& value = keyValue.after;
+                        
+                        if (key.find("Version") != std::string::npos)
+                        {
+                            SplitText versionNumber = TextSplit(value, ".");
+                            g_configVerion.major = atoi(versionNumber.before.c_str());
+                            g_configVerion.minor = atoi(versionNumber.after.c_str());
+                        }
+                    }
+                    else if (parsingState == Parse_Settings)
                     {
                         std::string cleanedTextLine = textLine;
                         CleanString(cleanedTextLine);
@@ -207,17 +245,11 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, std::vecto
                         const std::string& value = keyValue.after;
 
                         //Look for setting name
-                        bool foundSetting = false;
                         for (int32 i = (setting_Invalid + 1); i < setting_Count; i++)
                         {
                             IndividualSetting& is = g_settings[i];
                             if (key.find(is.name) != std::string::npos)
                             {
-                                if (settingsFound[i] == true)
-                                {
-                                    CreateErrorWindow(ToString("Duplicate setting '%s' found in config file: %s", is.name.c_str(), key.c_str()).c_str());
-                                }
-
                                 switch (is.dataType)
                                 {
                                 case SettingValueType_Float:
@@ -232,34 +264,17 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, std::vecto
                                 }
                                 case SettingValueType_Exe:
                                 {
-#if SETTINGS_IMPLIMENTATION == 3
                                     is.v_string = ConfigFileGetValueExe(value);
-#elif SETTINGS_IMPLIMENTATION == 2
-                                    std::string result = ConfigFileGetValueExe(value);
-                                    if (result.size() < SETTINGS_STRING_MAX)
-                                    {
-                                        memcpy(is.v_string, result.data(), result.size());
-                                    }
-                                    else
-                                    {
-                                        CreateErrorWindow(ToString("Setting value too long (must be under 255 characters): %s", result.c_str()).c_str());
-                                    }
-#endif
                                     break;
                                 }
                                 }
-                                settingsFound[i] = true;
-                                foundSetting = true;
                             }
-                        }
-                        if (foundSetting = false)
-                        {
-                            CreateErrorWindow(ToString("Unknown setting %s", key).c_str());
                         }
                         break;
                     }
                     else if (parsingState == Parse_Inclusive)
                     {
+
                         std::string cleanedTextLine = textLine;
                         CleanString(cleanedTextLine);
                         if (cleanedTextLine != "")
@@ -271,6 +286,7 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, std::vecto
                     }
                     else if (parsingState == Parse_Exclusive)
                     {
+
                         std::string cleanedTextLine = textLine;
                         CleanString(cleanedTextLine);
                         if (cleanedTextLine != "")
@@ -284,36 +300,26 @@ void UpdateSettingsAndTextLists(uint64& lastTimeSettingsWereModified, std::vecto
             }
         }
 
-        bool needToUpdateConfigFile = false;
-        for (int32 i = (setting_Invalid + 1); i < setting_Count; i++)
+        if (informationHeaderRowNumber == std::string::npos)
         {
+            //version 0.0 needs to be converted to version 0.1
+            auto settingsLocation = configFileText.find("$SETTINGS$");
+            if (settingsLocation == std::string::npos)
+                CreateErrorWindow("Could not find $SETTINGS$ in config file");
 
-            if (settingHeaderRowNumber == std::string::npos)
-            {
-                CreateErrorWindow("Settings header '$SETTINGS$' not found in configuration file");
-            }
-            if (!settingsFound[i])
-            {
-                needToUpdateConfigFile = true;
-                if (settingHeaderRowNumber == configFileTextArray.size() - 1)
-                    configFileTextArray.push_back("\n");
+            //Add INFORMATION section and version number
+            configFileText.insert(settingsLocation, "$INFORMATION$\nVersion = 0.1\n\n");
 
-                std::string newLine = ToString("%s = %s", g_settings[i].name.c_str(), s_defaultSettings[i].value.c_str());
-                if (s_defaultSettings[i].comments != "")//add comments
-                    newLine = newLine + ToString(" #%s", s_defaultSettings[i].comments.c_str());
-                newLine = newLine + "\n";
+            //Find and add new settings
+            auto lastSettingLocation = configFileText.find("AfterburnerLocation");
+            if (lastSettingLocation == std::string::npos)
+                CreateErrorWindow("Could not find AfterburnerLocation in config file");
+            auto lastSettingLocationEndLine = configFileText.find_first_of("\n", lastSettingLocation);
+            configFileText.insert(lastSettingLocationEndLine + 1, "StartProcessesMinimized = true #This will start the miner process(es) minimized\n");
 
-                configFileTextArray.insert(configFileTextArray.begin() + settingHeaderRowNumber + i, newLine);
-            }
-        }
-        if (needToUpdateConfigFile)
-        {
             //Write array to disk
             File configFile(configFileName, File::Mode::Write, false);
-            for (int32 i = 0; i < configFileTextArray.size(); i++)
-            {
-                configFile.Write(configFileTextArray[i]);
-            }
+            configFile.Write(configFileText);
             reloadConfigFile = true;
         }
 
