@@ -472,18 +472,31 @@ void Process::CloseHandles(const _PROCESS_INFORMATION& pi)
 void Process::End(uint32 exitCode)
 {
     HANDLE processHandle = NULL;
+#if 1
+    if (GetExistingProcessInformation(m_exeName, m_processID))
+    {
+        processHandle = OpenProcess(PROCESS_TERMINATE, FALSE, m_processID);
+    }
+
+#else
     if (m_processID)
     {
-        processHandle = OpenProcess(DELETE | PROCESS_QUERY_INFORMATION | PROCESS_TERMINATE, FALSE, m_processID);
+        processHandle = OpenProcess(PROCESS_TERMINATE, FALSE, m_processID);
     }
     if (processHandle == NULL && GetExistingProcessInformation(m_exeName, m_processID))
     {
-        processHandle = OpenProcess(DELETE | PROCESS_QUERY_INFORMATION | PROCESS_TERMINATE, FALSE, m_processID);
+        processHandle = OpenProcess(PROCESS_TERMINATE, FALSE, m_processID);
     }
+
+#endif
 
     if (processHandle != NULL)
     {
-        TerminateProcess(processHandle, exitCode);
+        if (TerminateProcess(processHandle, exitCode) == 0)
+        {
+            DWORD errorValue = GetLastError();
+            CreateErrorWindow(ToString("TerminateProcess returned: %i on %s, processID: %u", errorValue, m_exeName.c_str(), m_processID).c_str());
+        }
         CloseHandle(processHandle);
         m_processID = 0;
         return;
@@ -491,6 +504,7 @@ void Process::End(uint32 exitCode)
     else
     {
         //process isn't running exist
+        CreateErrorWindow(ToString("Could not find %s process, processID: %u", m_exeName.c_str(), m_processID).c_str());
         m_processID = 0;
         return;
     }
@@ -500,6 +514,5 @@ void Process::End(uint32 exitCode)
 #include <thread>
 void Sleep(float i_seconds)
 {
-    using fsec = std::chrono::duration<float>;
     std::this_thread::sleep_for(std::chrono::duration<float>{i_seconds});
 }
