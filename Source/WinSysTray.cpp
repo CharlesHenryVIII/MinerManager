@@ -77,12 +77,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 StopButtonFlag |= MF_GRAYED;
             }
 
-            InsertMenu(g_popMenu, 0xFFFFFFFF, StartButtonFlag,  IDM_START,  "Start");
-            InsertMenu(g_popMenu, 0xFFFFFFFF, StopButtonFlag,   IDM_STOP,   "Stop");
-            InsertMenu(g_popMenu, 0xFFFFFFFF, MF_SEPARATOR,     IDM_SEP,    "SEP");
-            InsertMenu(g_popMenu, 0xFFFFFFFF, basicFlags,       IDM_CONFIG, "Settings");
-            InsertMenu(g_popMenu, 0xFFFFFFFF, MF_SEPARATOR,     IDM_SEP,    "SEP");
-            InsertMenu(g_popMenu, 0xFFFFFFFF, basicFlags,       IDM_EXIT,   "Exit");
+            if (g_gameDetected.load() && g_updating)
+                InsertMenu(g_popMenu, 0xFFFFFFFF, basicFlags | MF_DISABLED, MENU_STATUS, "Detected");
+            else
+                InsertMenu(g_popMenu, 0xFFFFFFFF, basicFlags | MF_DISABLED, MENU_STATUS, "Not Detected");
+            InsertMenu(g_popMenu, 0xFFFFFFFF, MF_SEPARATOR,     MENU_SEP, "SEP");
+            InsertMenu(g_popMenu, 0xFFFFFFFF, StartButtonFlag,  MENU_START,  "Start");
+            InsertMenu(g_popMenu, 0xFFFFFFFF, StopButtonFlag,   MENU_STOP,   "Stop");
+            InsertMenu(g_popMenu, 0xFFFFFFFF, MF_SEPARATOR,     MENU_SEP,    "SEP");
+            InsertMenu(g_popMenu, 0xFFFFFFFF, basicFlags,       MENU_CONFIG, "Settings");
+            InsertMenu(g_popMenu, 0xFFFFFFFF, MF_SEPARATOR,     MENU_SEP,    "SEP");
+            InsertMenu(g_popMenu, 0xFFFFFFFF, basicFlags,       MENU_EXIT,   "Exit");
 
             SetForegroundWindow(hWnd);
             TrackPopupMenu(g_popMenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_BOTTOMALIGN, clickLocation.x, clickLocation.y, 0, hWnd, NULL);
@@ -99,19 +104,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         // Parse the menu selections:
         switch (LOWORD(wParam))
         {
-        case IDM_START:
+        case MENU_START:
         {
 
             g_messageFromMainToProcess |= THREAD_MESSAGE_START;
             break;
         }
-        case IDM_STOP:
+        case MENU_STOP:
         {
 
             g_messageFromMainToProcess |= THREAD_MESSAGE_STOP;
             break;
         }
-        case IDM_CONFIG:
+        case MENU_CONFIG:
         {
             //not sure how to do this
 #if 0
@@ -127,7 +132,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 #endif
             break;
         }
-        case IDM_EXIT:
+        case MENU_EXIT:
         {
 
             g_messageFromMainToProcess |= THREAD_MESSAGE_EXIT;

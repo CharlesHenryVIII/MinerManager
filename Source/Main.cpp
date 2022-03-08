@@ -5,6 +5,8 @@
 #include "ProcessSwitching.h"
 #include "Settings.h"
 
+std::atomic<bool> g_gameDetected;
+
 int32 ThreadMain(void* data)
 {
     ConsoleOutput("MinerManager started", ConsoleColor_Green);
@@ -19,7 +21,8 @@ int32 ThreadMain(void* data)
 
     std::vector<ProcessInfo> s_processList;
     s_processList.reserve(500);
-    bool foundGame = false;
+    g_gameDetected = false;
+    bool gameDetected;
 
     while (g_appRunning)
     {
@@ -49,8 +52,7 @@ int32 ThreadMain(void* data)
             UpdateSettingsAndTextLists(s_lastTimeConfigWasModified, s_inclusiveText, s_exclusiveText);
             GetFullProcessList(s_processList);
 
-            //for (const ProcessInfo& process : s_processList)
-            foundGame = false;
+            gameDetected = false;
             for (int32 i = 0; i < s_processList.size(); i++)
             {
                 const ProcessInfo& process = s_processList[i];
@@ -58,32 +60,34 @@ int32 ThreadMain(void* data)
                 {
                     if (FindString_ExactCaseInsensitive(process.name, t))
                     {
-                        foundGame = true;
+                        gameDetected = true;
                         break;
                     }
                 }
-                if (!foundGame)
+                if (!gameDetected)
                 {
                     for (const std::string& t : s_inclusiveText)
                     {
                         if (FindStringCaseInsensitive(process.name, t))
                         {
-                            foundGame = true;
+                            gameDetected = true;
                             break;
                         }
                     }
                 }
-                if (foundGame)
+                if (gameDetected)
                     break;
             }
-            if (foundGame == g_currentlyMining)
+            if (gameDetected == g_currentlyMining)
             {
-                if (foundGame)
+                if (gameDetected)
                 {
+                    g_gameDetected = true;
                     ProcessSwitchingEndMiner();
                 }
                 else
                 {
+                    g_gameDetected = false;
                     ProcessSwitchingStartMiner();
                 }
             }

@@ -503,8 +503,9 @@ void Process::End(uint32 exitCode)
     }
     else
     {
-        //process isn't running exist
-        CreateErrorWindow(ToString("Could not find %s process, processID: %u", m_exeName.c_str(), m_processID).c_str());
+        //process isn't running
+        if (m_processID)
+            CreateErrorWindow(ToString("Could not find %s process, processID: %u", m_exeName.c_str(), m_processID).c_str());
         m_processID = 0;
         return;
     }
